@@ -86,9 +86,30 @@ public abstract class AbstractHttpVerticle extends BaseVerticle {
 	private HttpServer httpServer;
 	private HealthCheckHandler hcHandler;
 	private List<String> procedures;
+	private JsonObject serverConfiguration;
 
 	public AbstractHttpVerticle() {
 		super();
+	}
+
+	public AbstractHttpVerticle(JsonObject serverConfiguration) {
+		this.serverConfiguration = serverConfiguration;
+		setPort(serverConfiguration.getInteger("port", port));
+		setContextPath(serverConfiguration.getString("context_path", contextPath));
+	}
+
+	/**
+	 * @return the serverConfiguration
+	 */
+	public JsonObject getServerConfiguration() {
+		return this.serverConfiguration;
+	}
+
+	/**
+	 * @param serverConfiguration the serverConfiguration to set
+	 */
+	public void setServerConfiguration(JsonObject serverConfiguration) {
+		this.serverConfiguration = serverConfiguration;
 	}
 
 	/**

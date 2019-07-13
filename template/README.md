@@ -12,8 +12,4 @@ run <full-class-name-of-boot-verticle> --redeploy=**/*.java --launcher-class=io.
 
 The Env: `APP_LOG_LEVEL=debug`
 
-# 项目说明
-
-
-
 # 部署说明
