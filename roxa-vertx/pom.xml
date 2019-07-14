@@ -3,7 +3,7 @@
 	<parent>
 		<groupId>io.roxa</groupId>
 		<artifactId>roxa-base</artifactId>
-		<version>1.0.0</version>
+		<version>1.0.1-SNAPSHOT</version>
 	</parent>
 	<artifactId>roxa-vertx</artifactId>
 	
