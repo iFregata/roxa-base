@@ -32,18 +32,37 @@ public abstract class Digests {
 	/**
 	 * HmacSHA1 内容签名, Base64
 	 * 
-	 * @param appSecretKey - 签名Key
+	 * @param appSecretKey - 签名Key, Hex
 	 * @param content      - 需签名的内容
 	 * @return - Base64 encoded 签名
 	 */
 	public static String digestAsBase64(String appSecretKey, String content) {
+		return Base64.getEncoder().encodeToString(digest(appSecretKey, content));
+	}
+
+	public static String digestAsBase64UrlSafe(String appSecretKey, String content) {
 		return Base64.getUrlEncoder().encodeToString(digest(appSecretKey, content));
+	}
+
+	/**
+	 * HmacSHA1 内容签名, Base64
+	 * 
+	 * @param appSecretKey - 签名Key, Plain
+	 * @param content      - 需签名的内容
+	 * @return - Base64 encoded 签名
+	 */
+	public static String digestAsBase64PlainKey(String appSecretKey, String content) {
+		return Base64.getEncoder().encodeToString(digestPlainKey(appSecretKey, content));
+	}
+
+	public static String digestAsBase64PlainKeyUrlSafe(String appSecretKey, String content) {
+		return Base64.getUrlEncoder().encodeToString(digestPlainKey(appSecretKey, content));
 	}
 
 	/**
 	 * HmacSHA1 内容签名, Hex
 	 * 
-	 * @param appSecretKey - 签名Key
+	 * @param appSecretKey - 签名Key Hex
 	 * @param content      - 需签名的内容
 	 * @return - Hex encoded 签名
 	 */
@@ -52,16 +71,56 @@ public abstract class Digests {
 	}
 
 	/**
+	 * HmacSHA1 内容签名, Hex
+	 * 
+	 * @param appSecretKey - 签名Key Plain
+	 * @param content      - 需签名的内容
+	 * @return - Hex encoded 签名
+	 */
+	public static String digestAsHexPlainKey(String appSecretKey, String content) {
+		return asHex(digestPlainKey(appSecretKey, content));
+	}
+
+	/**
 	 * HmacSHA1 内容签名验证, Base64
 	 * 
 	 * @param appSecret    - Base64 encoded 签名
-	 * @param appSecretKey - 签名Key
+	 * @param appSecretKey - 签名Key, Hex
 	 * @param content      - 签名的内容
 	 * @return
 	 */
 	public static boolean digestVerifyBase64(String appSecret, String appSecretKey, String content) {
 		byte[] expectedBytes = digest(appSecretKey, content);
+		byte[] actualBytpes = Base64.getDecoder().decode(appSecret);
+		return MessageDigest.isEqual(expectedBytes, actualBytpes);
+
+	}
+
+	public static boolean digestVerifyBase64UrlSafe(String appSecret, String appSecretKey, String content) {
+		byte[] expectedBytes = digest(appSecretKey, content);
 		byte[] actualBytpes = Base64.getUrlDecoder().decode(appSecret);
+		return MessageDigest.isEqual(expectedBytes, actualBytpes);
+
+	}
+
+	/**
+	 * HmacSHA1 内容签名验证, Base64
+	 * 
+	 * @param appSecret    - Base64 encoded 签名
+	 * @param appSecretKey - 签名Key, Plain
+	 * @param content      - 签名的内容
+	 * @return
+	 */
+	public static boolean digestVerifyBase64PlainKey(String appSecret, String appSecretKey, String content) {
+		byte[] expectedBytes = digestPlainKey(appSecretKey, content);
+		byte[] actualBytpes = Base64.getUrlDecoder().decode(appSecret);
+		return MessageDigest.isEqual(expectedBytes, actualBytpes);
+
+	}
+
+	public static boolean digestVerifyBase64PlainKeyUrlSafe(String appSecret, String appSecretKey, String content) {
+		byte[] expectedBytes = digestPlainKey(appSecretKey, content);
+		byte[] actualBytpes = Base64.getDecoder().decode(appSecret);
 		return MessageDigest.isEqual(expectedBytes, actualBytpes);
 
 	}
@@ -70,12 +129,27 @@ public abstract class Digests {
 	 * HmacSHA1 内容签名验证, Hex
 	 * 
 	 * @param appSecret    - Hex encoded 签名
-	 * @param appSecretKey - 签名Key
+	 * @param appSecretKey - 签名Key, Hex
 	 * @param content      - 签名的内容
 	 * @return
 	 */
 	public static boolean digestVerifyHex(String appSecret, String appSecretKey, String content) {
 		byte[] expectedBytes = digest(appSecretKey, content);
+		byte[] actualBytpes = asBytes((appSecret));
+		return MessageDigest.isEqual(expectedBytes, actualBytpes);
+
+	}
+
+	/**
+	 * HmacSHA1 内容签名验证, Hex
+	 * 
+	 * @param appSecret    - Hex encoded 签名
+	 * @param appSecretKey - 签名Key, Plain
+	 * @param content      - 签名的内容
+	 * @return
+	 */
+	public static boolean digestVerifyHexPlainKey(String appSecret, String appSecretKey, String content) {
+		byte[] expectedBytes = digestPlainKey(appSecretKey, content);
 		byte[] actualBytpes = asBytes((appSecret));
 		return MessageDigest.isEqual(expectedBytes, actualBytpes);
 
@@ -99,7 +173,7 @@ public abstract class Digests {
 	/**
 	 * HmacSHA256 with plain key
 	 * 
-	 * @param appSecretKey
+	 * @param appSecretKey, Plain
 	 * @param content
 	 * @return
 	 */
@@ -118,7 +192,7 @@ public abstract class Digests {
 	/**
 	 * HmacSHA256 with Hex key
 	 * 
-	 * @param appSecretKey
+	 * @param appSecretKey, Hex
 	 * @param content
 	 * @return
 	 */

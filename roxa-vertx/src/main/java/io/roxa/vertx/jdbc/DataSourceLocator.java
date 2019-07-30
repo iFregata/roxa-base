@@ -25,6 +25,8 @@ public interface DataSourceLocator {
 
 	void locate(Supplier<String> dsNameSupplier, Consumer<DataSource> dsConsumer);
 
+	void register(String dsName, Consumer<DataSource> dsConsumer);
+
 	static DataSourceLocator create(Vertx vertx, String configLocation) {
 		return new DataSourceLocatorImpl(vertx, configLocation);
 	}

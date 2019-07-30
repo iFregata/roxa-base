@@ -39,9 +39,10 @@ public class DataSourceLocatorImpl implements DataSourceLocator {
 	private static final Logger logger = LoggerFactory.getLogger(DataSourceLocatorImpl.class);
 
 	private Map<String, HikariDataSource> multiDataSource = new ConcurrentHashMap<>();
+	private Map<String, Consumer<DataSource>> dsConsumers = new ConcurrentHashMap<>();
 	private ConfigRegistry configRegistry;
-	private Supplier<String> dsNameSupplier;
-	private Consumer<DataSource> dsConsumer;
+//	private Supplier<String> dsNameSupplier;
+//	private Consumer<DataSource> dsConsumer;
 	private Vertx vertx;
 
 	DataSourceLocatorImpl(Vertx vertx, String configLocation) {
@@ -53,11 +54,18 @@ public class DataSourceLocatorImpl implements DataSourceLocator {
 	public void destroy() {
 		if (multiDataSource != null)
 			multiDataSource.clear();
+		if (dsConsumers != null)
+			dsConsumers.clear();
 	}
 
 	public void locate(Supplier<String> dsNameSupplier, Consumer<DataSource> dsConsumer) {
-		this.dsNameSupplier = dsNameSupplier;
-		this.dsConsumer = dsConsumer;
+		// this.dsNameSupplier = dsNameSupplier;
+		// this.dsConsumer = dsConsumer;
+		register(dsNameSupplier.get(), dsConsumer);
+	}
+
+	public void register(String dsName, Consumer<DataSource> dsConsumer) {
+		dsConsumers.put(dsName, dsConsumer);
 	}
 
 	private void dataSourceUpdateHandler(Message<JsonObject> msg) {
@@ -67,15 +75,17 @@ public class DataSourceLocatorImpl implements DataSourceLocator {
 			try {
 				releaseHikariDataSources();
 				JsonArray configArray = body.getJsonArray("data_sources");
-				String dsName = dsNameSupplier.get();
-				configArray.stream().map(item -> (JsonObject) item)
-						.filter(cfg -> dsName.equals(cfg.getString("data_source_name"))).findFirst()
-						.ifPresent(config -> {
-							DataSourceBuilder builder = DataSourceBuilder.create(config);
-							HikariDataSource hikariDataSource = builder.build();
-							multiDataSource.put(config.getString("data_source_name"), hikariDataSource);
-							logger.info("Register the data source service with config: {}", config.encode());
-						});
+				dsConsumers.entrySet().stream().forEach(e -> {
+					String dsName = e.getKey();
+					configArray.stream().map(item -> (JsonObject) item)
+							.filter(cfg -> dsName.equals(cfg.getString("data_source_name"))).findFirst()
+							.ifPresent(config -> {
+								DataSourceBuilder builder = DataSourceBuilder.create(config);
+								HikariDataSource hikariDataSource = builder.build();
+								multiDataSource.put(config.getString("data_source_name"), hikariDataSource);
+								logger.info("Register the data source service with config: {}", config.encode());
+							});
+				});
 				execFuture.complete();
 			} catch (Throwable e) {
 				execFuture.fail(e);
@@ -84,8 +94,11 @@ public class DataSourceLocatorImpl implements DataSourceLocator {
 		}, future);
 		future.setHandler(ar -> {
 			if (ar.succeeded()) {
-				String dsName = dsNameSupplier.get();
-				dsConsumer.accept(multiDataSource.get(dsName));
+				dsConsumers.entrySet().stream().forEach(e -> {
+					String dsName = e.getKey();
+					Consumer<DataSource> c = e.getValue();
+					c.accept(multiDataSource.get(dsName));
+				});
 			} else {
 				logger.error("Data source locator failed", ar.cause());
 			}
