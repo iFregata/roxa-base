@@ -44,6 +44,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
@@ -146,7 +147,8 @@ public abstract class AbstractHttpVerticle extends BaseVerticle {
 		this.staticServingLocation = staticServingLocation;
 	}
 
-	public void start(Future<Void> fut) throws Exception {
+	@Override
+	public void start(Promise<Void> startPromise) throws Exception {
 		String hostname = System.getenv("HOSTNAME");
 		String serverName = getServerName();
 		String serverNameOn = hostname == null ? serverName : String.format("%s on %s", serverName, hostname);
@@ -175,7 +177,7 @@ public abstract class AbstractHttpVerticle extends BaseVerticle {
 				logger.error("Could not start Http service", e);
 			});
 		}).flatMap(this::setupServiceDiscovery).flatMapCompletable(this::setupHttpEndpoint)
-				.subscribe(CompletableHelper.toObserver(fut));
+				.subscribe(CompletableHelper.toObserver(startPromise.future()));
 	}
 
 	/**
@@ -200,7 +202,7 @@ public abstract class AbstractHttpVerticle extends BaseVerticle {
 	 * @param name
 	 * @param procedure
 	 */
-	protected void hcProcedure(String name, Handler<io.vertx.reactivex.core.Future<Status>> procedure) {
+	protected void hcProcedure(String name, Handler<io.vertx.reactivex.core.Promise<Status>> procedure) {
 		hcHandler.register(name, procedure);
 		procedures.add(name);
 	}

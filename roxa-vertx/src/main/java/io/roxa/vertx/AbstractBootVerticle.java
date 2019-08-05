@@ -26,6 +26,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
 import io.vertx.core.json.JsonObject;
 
@@ -45,8 +46,8 @@ public abstract class AbstractBootVerticle extends AbstractVerticle {
 	public AbstractBootVerticle() {
 	}
 
-	public void stop(Future<Void> stopFuture) throws Exception {
-		preStop().compose(v -> undeployAll()).setHandler(stopFuture);
+	public void stop(Promise<Void> stopPromise) throws Exception {
+		preStop().compose(v -> undeployAll()).setHandler(stopPromise.future());
 	}
 
 	protected Future<Void> preStop() {
@@ -54,19 +55,19 @@ public abstract class AbstractBootVerticle extends AbstractVerticle {
 	}
 
 	protected Future<JsonObject> configuration() {
-		Future<JsonObject> future = Future.future();
+		Promise<JsonObject> promise = Promise.promise();
 		ConfigRetriever cfgr = ConfigRetriever.create(vertx);
 		cfgr.getConfig(ar -> {
 			if (ar.succeeded()) {
 				JsonObject cfgJson = ar.result();
 				logger.debug("ConfigRetriever conf/config.json: {}", cfgJson.encodePrettily());
-				future.complete(cfgJson);
+				promise.complete(cfgJson);
 			} else
-				future.fail(ar.cause());
+				promise.fail(ar.cause());
 
 		});
 		cfgr.listen(this::configurationChanged);
-		return future;
+		return promise.future();
 	}
 
 	protected void configurationChanged(ConfigChange change) {
@@ -80,7 +81,7 @@ public abstract class AbstractBootVerticle extends AbstractVerticle {
 			DeploymentOptions deploymentOptions) {
 		if (supplier == null || verticleClass == null)
 			return Future.failedFuture("Verticle supplier is null or not found!");
-		Future<String> future = Future.future();
+		Promise<String> promise = Promise.promise();
 		String name = verticleClass.getName();
 		vertx.deployVerticle(supplier, deploymentOptions, ar -> {
 			if (ar.succeeded()) {
@@ -88,32 +89,32 @@ public abstract class AbstractBootVerticle extends AbstractVerticle {
 				logger.info("Deployed verticle with supplier, name: {}, Id: {}, deployment options: {}", name, id,
 						deploymentOptions.toJson().encode());
 				deploymentIds.put(id, name);
-				future.complete(id);
+				promise.complete(id);
 			} else {
 				logger.error("Cannot deploy verticle with supplier: " + name, ar.cause());
-				future.fail(ar.cause());
+				promise.fail(ar.cause());
 			}
 		});
-		return future;
+		return promise.future();
 	}
 
 	protected Future<String> deploy(Verticle verticle, DeploymentOptions deploymentOptions) {
 		if (verticle == null)
 			return Future.failedFuture("The verticle instance must not be null!");
-		Future<String> future = Future.future();
+		Promise<String> promise = Promise.promise();
 		String name = verticle.getClass().getName();
 		vertx.deployVerticle(verticle, deploymentOptions, ar -> {
 			if (ar.succeeded()) {
 				String id = ar.result();
 				logger.info("Deployed verticle instance: {}, Id: {}", name, id);
 				deploymentIds.put(id, name);
-				future.complete(id);
+				promise.complete(id);
 			} else {
 				logger.error("Cannot deploy verticle instance: " + name, ar.cause());
-				future.fail(ar.cause());
+				promise.fail(ar.cause());
 			}
 		});
-		return future;
+		return promise.future();
 	}
 
 	protected Future<String> redeploy(Verticle verticle) {
@@ -131,26 +132,26 @@ public abstract class AbstractBootVerticle extends AbstractVerticle {
 	protected Future<String> deploy(Verticle verticle) {
 		if (verticle == null)
 			return Future.failedFuture("The verticle instance must not be null!");
-		Future<String> future = Future.future();
+		Promise<String> promise = Promise.promise();
 		String name = verticle.getClass().getName();
 		vertx.deployVerticle(verticle, ar -> {
 			if (ar.succeeded()) {
 				String id = ar.result();
 				logger.info("Deployed verticle instance: {}, Id: {}", name, id);
 				deploymentIds.put(id, name);
-				future.complete(id);
+				promise.complete(id);
 			} else {
 				logger.error("Cannot deploy verticle instance: " + name, ar.cause());
-				future.fail(ar.cause());
+				promise.fail(ar.cause());
 			}
 		});
-		return future;
+		return promise.future();
 	}
 
 	protected Future<Void> undeploy(String verticleId) {
 		if (verticleId == null)
 			return Future.succeededFuture();
-		Future<Void> future = Future.future();
+		Promise<Void> promise = Promise.promise();
 		String name = deploymentIds.remove(verticleId);
 		if (name == null)
 			return Future.succeededFuture();
@@ -158,30 +159,30 @@ public abstract class AbstractBootVerticle extends AbstractVerticle {
 		vertx.undeploy(verticleId, ar -> {
 			if (ar.succeeded()) {
 				logger.info("Undeploy verticle succeeded with id: {}, name: {}", verticleId, name);
-				future.complete();
+				promise.complete();
 			} else {
 				logger.error("Undeploy verticle failed with id: {}, name: {}", verticleId, name);
-				future.fail(ar.cause());
+				promise.fail(ar.cause());
 			}
 		});
-		return future;
+		return promise.future();
 	}
 
 	private Future<Void> undeployAll() {
-		Future<Void> future = Future.future();
+		Promise<Void> promise = Promise.promise();
 		if (deploymentIds == null || deploymentIds.isEmpty()) {
-			future.complete();
+			promise.complete();
 		} else {
 			CompositeFuture.all(deploymentIds.keySet().stream().filter(id -> vertx.deploymentIDs().contains(id))
 					.map(this::undeploy).collect(Collectors.toList())).setHandler(ar -> {
 						if (ar.succeeded()) {
-							future.complete();
+							promise.complete();
 						} else {
-							future.fail(ar.cause());
+							promise.fail(ar.cause());
 						}
 					});
 		}
-		return future;
+		return promise.future();
 	}
 
 }

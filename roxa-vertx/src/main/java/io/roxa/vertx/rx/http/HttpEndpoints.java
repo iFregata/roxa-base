@@ -24,6 +24,7 @@ import io.roxa.util.Strings;
 import io.vertx.circuitbreaker.CircuitBreaker;
 import io.vertx.circuitbreaker.CircuitBreakerOptions;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClientOptions;
@@ -188,35 +189,35 @@ public final class HttpEndpoints {
 	}
 
 	public Future<JsonObject> unwrapObject(JsonObject ar) {
-		Future<JsonObject> future = Future.future();
+		Promise<JsonObject> promise = Promise.promise();
 		Integer sc = ar.getInteger("sc", -1);
 		if (sc == 200) {
 			JsonObject payload = ar.getJsonObject("payload", null);
 			if (payload != null) {
-				future.complete(payload);
+				promise.complete(payload);
 			} else {
-				future.complete(EMPTY_JSON_OBJECT);
+				promise.complete(EMPTY_JSON_OBJECT);
 			}
 		} else {
-			future.fail(new GeneralFailureException(sc, ar.getString("st")));
+			promise.fail(new GeneralFailureException(sc, ar.getString("st")));
 		}
-		return future;
+		return promise.future();
 	}
 
 	public Future<JsonArray> unwrapArray(JsonObject ar) {
-		Future<JsonArray> future = Future.future();
+		Promise<JsonArray> promise = Promise.promise();
 		Integer sc = ar.getInteger("sc", -1);
 		if (sc == 200) {
 			JsonArray payload = ar.getJsonArray("payload", null);
 			if (payload != null) {
-				future.complete(payload);
+				promise.complete(payload);
 			} else {
-				future.complete(EMPTY_JSON_ARRAY);
+				promise.complete(EMPTY_JSON_ARRAY);
 			}
 		} else {
-			future.fail(new GeneralFailureException(sc, ar.getString("st")));
+			promise.fail(new GeneralFailureException(sc, ar.getString("st")));
 		}
-		return future;
+		return promise.future();
 	}
 
 	private Single<JsonObject> request(String httpMethod, JsonObject payload) {

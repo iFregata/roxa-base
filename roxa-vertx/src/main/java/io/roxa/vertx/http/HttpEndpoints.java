@@ -26,6 +26,7 @@ import io.vertx.circuitbreaker.CircuitBreakerOptions;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
@@ -164,67 +165,67 @@ public final class HttpEndpoints {
 	}
 
 	public Future<JsonObject> unwrapSafeObject(JsonObject ar) {
-		Future<JsonObject> future = Future.future();
+		Promise<JsonObject> promise = Promise.promise();
 		Integer sc = ar.getInteger("sc", -1);
 		if (sc == 200) {
 			JsonObject payload = ar.getJsonObject("payload", null);
 			if (payload != null) {
-				future.complete(payload);
+				promise.complete(payload);
 			} else {
-				future.complete(EMPTY_JSON_OBJECT);
+				promise.complete(EMPTY_JSON_OBJECT);
 			}
 		} else {
-			future.complete(EMPTY_JSON_OBJECT);
+			promise.complete(EMPTY_JSON_OBJECT);
 		}
-		return future;
+		return promise.future();
 	}
 
 	public Future<JsonArray> unwrapSafeArray(JsonObject ar) {
-		Future<JsonArray> future = Future.future();
+		Promise<JsonArray> promise = Promise.promise();
 		Integer sc = ar.getInteger("sc", -1);
 		if (sc == 200) {
 			JsonArray payload = ar.getJsonArray("payload", null);
 			if (payload != null) {
-				future.complete(payload);
+				promise.complete(payload);
 			} else {
-				future.complete(EMPTY_JSON_ARRAY);
+				promise.complete(EMPTY_JSON_ARRAY);
 			}
 		} else {
-			future.complete(EMPTY_JSON_ARRAY);
+			promise.complete(EMPTY_JSON_ARRAY);
 		}
-		return future;
+		return promise.future();
 	}
 
 	public Future<JsonObject> unwrapObject(JsonObject ar) {
-		Future<JsonObject> future = Future.future();
+		Promise<JsonObject> promise = Promise.promise();
 		Integer sc = ar.getInteger("sc", -1);
 		if (sc == 200) {
 			JsonObject payload = ar.getJsonObject("payload", null);
 			if (payload != null) {
-				future.complete(payload);
+				promise.complete(payload);
 			} else {
-				future.complete(EMPTY_JSON_OBJECT);
+				promise.complete(EMPTY_JSON_OBJECT);
 			}
 		} else {
-			future.fail(new GeneralFailureException(sc, ar.getString("st")));
+			promise.fail(new GeneralFailureException(sc, ar.getString("st")));
 		}
-		return future;
+		return promise.future();
 	}
 
 	public Future<JsonArray> unwrapArray(JsonObject ar) {
-		Future<JsonArray> future = Future.future();
+		Promise<JsonArray> promise = Promise.promise();
 		Integer sc = ar.getInteger("sc", -1);
 		if (sc == 200) {
 			JsonArray payload = ar.getJsonArray("payload", null);
 			if (payload != null) {
-				future.complete(payload);
+				promise.complete(payload);
 			} else {
-				future.complete(EMPTY_JSON_ARRAY);
+				promise.complete(EMPTY_JSON_ARRAY);
 			}
 		} else {
-			future.fail(new GeneralFailureException(sc, ar.getString("st")));
+			promise.fail(new GeneralFailureException(sc, ar.getString("st")));
 		}
-		return future;
+		return promise.future();
 	}
 
 	private Future<JsonObject> request(String httpMethod, JsonObject payload) {
@@ -238,30 +239,30 @@ public final class HttpEndpoints {
 				queryParams == null ? "NIL" : queryParams.encode(), headers == null ? "NIL" : headers.encode(),
 				payload == null ? "NIL" : payload.encode());
 		if (circuitBreaker != null)
-			return circuitBreaker.execute(future -> {
+			return circuitBreaker.execute(promise -> {
 				logger.debug("{} running with CiruitBreaker", httpMethod.toUpperCase());
 				getEndpoint().compose(client -> {
-					Future<JsonObject> futureInternal = Future.future();
+					Promise<JsonObject> promiseInternal = Promise.promise();
 					HttpRequest<Buffer> request = switchHttpMethod(client, httpMethod, uri);
 					bindQueryParam(queryParams, request);
 					bindHeader(headers, request);
 					if (payload != null && !payload.isEmpty())
-						request.as(BodyCodec.jsonObject()).sendJsonObject(payload, responseHandler(futureInternal));
+						request.as(BodyCodec.jsonObject()).sendJsonObject(payload, responseHandler(promiseInternal));
 					else
-						request.as(BodyCodec.jsonObject()).send(responseHandler(futureInternal));
-					return futureInternal.map(completeHandler(client));
-				}).setHandler(future);
+						request.as(BodyCodec.jsonObject()).send(responseHandler(promiseInternal));
+					return promiseInternal.future().map(completeHandler(client));
+				}).setHandler(promise.future());
 			});
 		return getEndpoint().compose(client -> {
-			Future<JsonObject> future = Future.future();
+			Promise<JsonObject> promise = Promise.promise();
 			HttpRequest<Buffer> request = switchHttpMethod(client, httpMethod, uri);
 			bindQueryParam(queryParams, request);
 			bindHeader(headers, request);
 			if (payload != null && !payload.isEmpty())
-				request.as(BodyCodec.jsonObject()).sendJsonObject(payload, responseHandler(future));
+				request.as(BodyCodec.jsonObject()).sendJsonObject(payload, responseHandler(promise));
 			else
-				request.as(BodyCodec.jsonObject()).send(responseHandler(future));
-			return future.map(completeHandler(client));
+				request.as(BodyCodec.jsonObject()).send(responseHandler(promise));
+			return promise.future().map(completeHandler(client));
 		});
 	}
 
@@ -299,10 +300,10 @@ public final class HttpEndpoints {
 		String endpointName = getEndpointName();
 		if (endpointName != null)
 			return getServiceDiscovery().compose(d -> {
-				Future<WebClient> future = Future.future();
+				Promise<WebClient> promise = Promise.promise();
 				logger.debug("Discovery the HTTPEndpoint client name: {}", endpointName);
-				HttpEndpoint.getWebClient(discovery, new JsonObject().put("name", endpointName), future);
-				return future;
+				HttpEndpoint.getWebClient(discovery, new JsonObject().put("name", endpointName), promise.future());
+				return promise.future();
 			});
 		JsonObject endpointInfo = getEndpointInfo();
 		if (endpointInfo == null || endpointInfo.isEmpty())
@@ -378,7 +379,7 @@ public final class HttpEndpoints {
 		}
 	}
 
-	private static Handler<AsyncResult<HttpResponse<JsonObject>>> responseHandler(Future<JsonObject> future) {
+	private static Handler<AsyncResult<HttpResponse<JsonObject>>> responseHandler(Promise<JsonObject> promise) {
 		return ar -> {
 			if (ar.succeeded()) {
 				HttpResponse<JsonObject> response = ar.result();
@@ -387,13 +388,13 @@ public final class HttpEndpoints {
 				if (sc == 200) {
 					JsonObject body = response.body();
 					logger.debug("Response body: {}", body == null ? "" : body.encode());
-					future.complete(body);
+					promise.complete(body);
 				} else {
-					future.fail(response.statusMessage());
+					promise.fail(response.statusMessage());
 				}
 			} else {
 				logger.error("Could not complete HTTP request!", ar.cause());
-				future.fail(ar.cause());
+				promise.fail(ar.cause());
 			}
 		};
 	}

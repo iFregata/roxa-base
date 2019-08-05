@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
 import io.reactivex.Completable;
 import io.reactivex.Single;
 import io.roxa.util.Strings;
-import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.impl.ConcurrentHashSet;
 import io.vertx.core.json.JsonObject;
 import io.vertx.reactivex.CompletableHelper;
@@ -42,8 +42,10 @@ public abstract class BaseVerticle extends AbstractVerticle {
 	protected ServiceDiscovery discovery;
 	protected Set<Record> registeredRecords = new ConcurrentHashSet<>();
 
-	public void stop(Future<Void> future) throws Exception {
-		tearDownServiceDiscovery().andThen(closeResources()).subscribe(CompletableHelper.toObserver(future));
+	@Override
+	public void stop(Promise<Void> stopPromise) throws Exception {
+		tearDownServiceDiscovery().andThen(closeResources())
+				.subscribe(CompletableHelper.toObserver(stopPromise.future()));
 	}
 
 	protected Completable closeResources() {

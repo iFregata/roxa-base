@@ -22,6 +22,7 @@ import io.roxa.util.Strings;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.impl.ConcurrentHashSet;
 import io.vertx.core.json.JsonObject;
 import io.vertx.servicediscovery.Record;
@@ -39,8 +40,8 @@ public abstract class BaseVerticle extends AbstractVerticle {
 	protected ServiceDiscovery discovery;
 	protected Set<Record> registeredRecords = new ConcurrentHashSet<>();
 
-	public void stop(Future<Void> future) throws Exception {
-		tearDownServiceDiscovery().compose(v -> closeResources()).setHandler(future);
+	public void stop(Promise<Void> stopPromise) throws Exception {
+		tearDownServiceDiscovery().compose(v -> closeResources()).setHandler(stopPromise.future());
 	}
 
 	protected Future<Void> closeResources() {
@@ -64,29 +65,30 @@ public abstract class BaseVerticle extends AbstractVerticle {
 		logger.info("Prepare to tear down the service discovery");
 		if (discovery == null)
 			return Future.succeededFuture();
-		Future<Void> future = Future.future();
+		Promise<Void> promise = Promise.promise();
 		List<Future> futures = new ArrayList<>();
 		registeredRecords.forEach(record -> {
-			Future<Void> cleanupFuture = Future.future();
-			futures.add(cleanupFuture);
+			Promise<Void> cleanupPromise = Promise.promise();
+			Future<Void> f = cleanupPromise.future();
+			futures.add(f);
 			String reg = record.getRegistration();
 			logger.info("Unpublish service discovery registration: {}", reg);
-			discovery.unpublish(reg, cleanupFuture);
+			discovery.unpublish(reg, f);
 		});
 		if (futures.isEmpty()) {
 			closeServiceDiscovery();
-			future.complete();
+			promise.complete();
 		} else {
 			CompositeFuture.all(futures).setHandler(ar -> {
 				closeServiceDiscovery();
 				if (ar.failed()) {
-					future.fail(ar.cause());
+					promise.fail(ar.cause());
 				} else {
-					future.complete();
+					promise.complete();
 				}
 			});
 		}
-		return future;
+		return promise.future();
 	}
 
 	protected Future<Void> publishHttpEndpoint(String name, String apiName, String host, int port, String contextPath) {
@@ -120,19 +122,19 @@ public abstract class BaseVerticle extends AbstractVerticle {
 	}
 
 	protected Future<Void> publish(Record record) {
-		Future<Void> future = Future.future();
+		Promise<Void> promise = Promise.promise();
 		discovery.publish(record, ar -> {
 			if (ar.succeeded()) {
 				registeredRecords.add(record);
 				logger.info("ServiceDiscovery publish,  registration: {}, name: {}", record.getRegistration(),
 						ar.result().getName());
-				future.complete();
+				promise.complete();
 			} else {
-				future.fail(ar.cause());
+				promise.fail(ar.cause());
 			}
 		});
 
-		return future;
+		return promise.future();
 	}
 
 	private void closeServiceDiscovery() {

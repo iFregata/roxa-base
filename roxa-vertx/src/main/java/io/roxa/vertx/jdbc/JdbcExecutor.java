@@ -24,6 +24,7 @@ import io.reactivex.Maybe;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -74,7 +75,8 @@ public class JdbcExecutor {
 	 * @return the list of rows where each row represents as JsonArray
 	 */
 	public Future<List<JsonArray>> query(String sql, JsonArray params) {
-		Future<List<JsonArray>> future = Future.future();
+		Promise<List<JsonArray>> promise = Promise.promise();
+		Future<List<JsonArray>> future = promise.future();
 		if (params == null || params.isEmpty())
 			jdbcClient.rxQuery(sql).map(ResultSet::getResults).subscribe(SingleHelper.toObserver(future));
 		else
@@ -171,7 +173,8 @@ public class JdbcExecutor {
 	 * @return the list of rows where each row represents as JsonObject
 	 */
 	public Future<List<JsonObject>> queryRows(String sql, JsonArray params) {
-		Future<List<JsonObject>> future = Future.future();
+		Promise<List<JsonObject>> promise = Promise.promise();
+		Future<List<JsonObject>> future = promise.future();
 		if (params == null || params.isEmpty())
 			jdbcClient.rxQuery(sql).map(rs -> rs.getRows(true)).subscribe(SingleHelper.toObserver(future));
 		else
@@ -217,7 +220,8 @@ public class JdbcExecutor {
 	 *         is not data
 	 */
 	public Future<JsonArray> queryOne(String sql, JsonArray params) {
-		Future<JsonArray> future = Future.future();
+		Promise<JsonArray> promise = Promise.promise();
+		Future<JsonArray> future = promise.future();
 		if (params == null || params.isEmpty())
 			jdbcClient.rxQuerySingle(sql).subscribe(MaybeHelper.toObserver(future));
 		else
@@ -248,7 +252,8 @@ public class JdbcExecutor {
 	 *         is not data
 	 */
 	public Future<JsonArray> queryOne(SQLConnection conn, String sql, JsonArray params) {
-		Future<JsonArray> future = Future.future();
+		Promise<JsonArray> promise = Promise.promise();
+		Future<JsonArray> future = promise.future();
 		if (params == null || params.isEmpty())
 			conn.rxQuerySingle(sql).subscribe(MaybeHelper.toObserver(future));
 		else
@@ -645,7 +650,8 @@ public class JdbcExecutor {
 	 * @return
 	 */
 	public <T> Future<T> with(Function<SQLConnection, Single<T>> handler) {
-		Future<T> future = Future.future();
+		Promise<T> promise = Promise.promise();
+		Future<T> future = promise.future();
 		withSingle(handler).subscribe(SingleHelper.toObserver(future));
 		return future;
 	}
@@ -708,7 +714,8 @@ public class JdbcExecutor {
 	 * @return
 	 */
 	public <T> Future<T> tx(Function<SQLConnection, Single<T>> handler) {
-		Future<T> future = Future.future();
+		Promise<T> promise = Promise.promise();
+		Future<T> future = promise.future();
 		txSingle(handler).subscribe(SingleHelper.toObserver(future));
 		return future;
 	}

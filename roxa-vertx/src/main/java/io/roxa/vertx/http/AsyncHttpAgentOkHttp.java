@@ -24,6 +24,7 @@ import io.roxa.http.HttpAgentAbstract;
 import io.roxa.http.HttpForm;
 import io.roxa.http.OkHttpClients;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import okhttp3.HttpUrl;
@@ -131,16 +132,17 @@ public class AsyncHttpAgentOkHttp extends AsyncHttpAgentAbstract implements Asyn
 
 	protected <R> Future<R> executeBlocking(Supplier<Result<R>> fn) {
 		Objects.requireNonNull(vertx);
-		Future<R> pending = Future.future();
-		vertx.executeBlocking(execFuture -> {
+		Promise<R> pendingPromise = Promise.promise();
+		Future<R> f = pendingPromise.future();
+		vertx.executeBlocking(promise -> {
 			logger.info("Execute blocking to send the Http request...");
 			Result<R> syncResult = fn.get();
 			if (syncResult.succeeded())
-				execFuture.complete(syncResult.result());
+				promise.complete(syncResult.result());
 			else
-				execFuture.fail(syncResult.cause());
+				promise.fail(syncResult.cause());
 
-		}, pending);
-		return pending;
+		}, f);
+		return f;
 	}
 }

@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 import com.zaxxer.hikari.HikariDataSource;
 
 import io.roxa.vertx.cfg.ConfigRegistry;
-import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
@@ -41,8 +41,6 @@ public class DataSourceLocatorImpl implements DataSourceLocator {
 	private Map<String, HikariDataSource> multiDataSource = new ConcurrentHashMap<>();
 	private Map<String, Consumer<DataSource>> dsConsumers = new ConcurrentHashMap<>();
 	private ConfigRegistry configRegistry;
-//	private Supplier<String> dsNameSupplier;
-//	private Consumer<DataSource> dsConsumer;
 	private Vertx vertx;
 
 	DataSourceLocatorImpl(Vertx vertx, String configLocation) {
@@ -70,8 +68,8 @@ public class DataSourceLocatorImpl implements DataSourceLocator {
 
 	private void dataSourceUpdateHandler(Message<JsonObject> msg) {
 		JsonObject body = msg.body();
-		Future<Void> future = Future.future();
-		vertx.executeBlocking(execFuture -> {
+		Promise<Void> promise = Promise.promise();
+		vertx.executeBlocking(execPromise -> {
 			try {
 				releaseHikariDataSources();
 				JsonArray configArray = body.getJsonArray("data_sources");
@@ -86,13 +84,13 @@ public class DataSourceLocatorImpl implements DataSourceLocator {
 								logger.info("Register the data source service with config: {}", config.encode());
 							});
 				});
-				execFuture.complete();
+				execPromise.complete();
 			} catch (Throwable e) {
-				execFuture.fail(e);
+				execPromise.fail(e);
 			}
 
-		}, future);
-		future.setHandler(ar -> {
+		}, promise.future());
+		promise.future().setHandler(ar -> {
 			if (ar.succeeded()) {
 				dsConsumers.entrySet().stream().forEach(e -> {
 					String dsName = e.getKey();

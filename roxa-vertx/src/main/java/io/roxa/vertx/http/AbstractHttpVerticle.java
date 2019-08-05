@@ -41,6 +41,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
@@ -142,7 +143,8 @@ public abstract class AbstractHttpVerticle extends BaseVerticle {
 		this.staticServingLocation = staticServingLocation;
 	}
 
-	public void start(Future<Void> fut) throws Exception {
+	@Override
+	public void start(Promise<Void> startPromise) throws Exception {
 		String hostname = System.getenv("HOSTNAME");
 		String serverName = getServerName();
 		String serverNameOn = hostname == null ? serverName : String.format("%s on %s", serverName, hostname);
@@ -163,21 +165,20 @@ public abstract class AbstractHttpVerticle extends BaseVerticle {
 			router.route(pathOf(staticServingLocation + "/*")).handler(staticHandler);
 			return Future.succeededFuture(router);
 		}).compose(this::setupRouter).compose(r -> {
-			Future<Void> httpServerFuture = Future.future();
+			Promise<Void> httpServerPromise = Promise.promise();
 			httpServer = vertx.createHttpServer();
 			httpServer.requestHandler(r).listen(port, ar -> {
 				if (ar.succeeded()) {
 					logger.info("{} Http service started. Listen on: {}, context path: {}", serverNameOn, port,
 							contextPath);
-					httpServerFuture.complete();
+					httpServerPromise.complete();
 				} else {
 					logger.error("Could not start Http service", ar.cause());
-					httpServerFuture.fail(ar.cause());
+					httpServerPromise.fail(ar.cause());
 				}
 			});
-			return httpServerFuture;
-		}).compose(this::setupServiceDiscovery).compose(this::setupHttpEndpoint).setHandler(fut);
-
+			return httpServerPromise.future();
+		}).compose(this::setupServiceDiscovery).compose(this::setupHttpEndpoint).setHandler(startPromise.future());
 	}
 
 	/**
@@ -201,7 +202,7 @@ public abstract class AbstractHttpVerticle extends BaseVerticle {
 	 * @param name
 	 * @param procedure
 	 */
-	protected void hcProcedure(String name, Handler<Future<Status>> procedure) {
+	protected void hcProcedure(String name, Handler<Promise<Status>> procedure) {
 		hcHandler.register(name, procedure);
 		procedures.add(name);
 	}

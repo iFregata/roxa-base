@@ -26,7 +26,7 @@ import io.reactivex.functions.Consumer;
 import io.roxa.GeneralFailureException;
 import io.vertx.config.ConfigChange;
 import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
 import io.vertx.core.json.JsonObject;
 import io.vertx.reactivex.CompletableHelper;
@@ -49,9 +49,9 @@ public abstract class AbstractBootVerticle extends AbstractVerticle {
 	public AbstractBootVerticle() {
 	}
 
-	public void stop(Future<Void> stopFuture) throws Exception {
-		preStop().andThen(undeployAll()).subscribe(CompletableHelper.toObserver(stopFuture));
-
+	@Override
+	public void stop(Promise<Void> stopPromise) throws Exception {
+		preStop().andThen(undeployAll()).subscribe(CompletableHelper.toObserver(stopPromise.future()));
 	}
 
 	protected Completable preStop() {
