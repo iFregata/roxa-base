@@ -19,8 +19,13 @@ import io.vertx.core.Vertx;
 
 /**
  * @author Steven Chen
+ * 
+ *         <p>
+ *         Using the JdbcManager instead
  *
  */
+
+@Deprecated
 public interface DataSourceLocator {
 
 	void locate(Supplier<String> dsNameSupplier, Consumer<DataSource> dsConsumer);

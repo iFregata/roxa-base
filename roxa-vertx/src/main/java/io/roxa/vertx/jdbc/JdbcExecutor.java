@@ -11,6 +11,7 @@
 package io.roxa.vertx.jdbc;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 
 import javax.sql.DataSource;
@@ -51,6 +52,9 @@ public class JdbcExecutor {
 
 	private JDBCClient jdbcClient;
 
+	private JdbcExecutor() {
+	}
+
 	/**
 	 * Create a instance of JdbcExecutor
 	 * 
@@ -59,7 +63,21 @@ public class JdbcExecutor {
 	 * @return
 	 */
 	public static JdbcExecutor create(Vertx vertx, DataSource dataSource) {
+		Objects.requireNonNull(vertx);
+		Objects.requireNonNull(dataSource);
 		JdbcExecutor inst = new JdbcExecutor(io.vertx.ext.jdbc.JDBCClient.create(vertx, dataSource));
+		return inst;
+	}
+
+	/**
+	 * Create a instance of JdbcExecutor
+	 * 
+	 * @param vertx
+	 * @param dataSource
+	 * @return
+	 */
+	public static JdbcExecutor create(io.vertx.reactivex.core.Vertx vertx, DataSource dataSource) {
+		JdbcExecutor inst = new JdbcExecutor(io.vertx.ext.jdbc.JDBCClient.create(vertx.getDelegate(), dataSource));
 		return inst;
 	}
 

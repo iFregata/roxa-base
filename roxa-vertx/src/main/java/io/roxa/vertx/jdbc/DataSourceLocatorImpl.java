@@ -34,6 +34,7 @@ import io.vertx.core.json.JsonObject;
  * @author Steven Chen
  *
  */
+@Deprecated
 public class DataSourceLocatorImpl implements DataSourceLocator {
 
 	private static final Logger logger = LoggerFactory.getLogger(DataSourceLocatorImpl.class);
@@ -57,8 +58,6 @@ public class DataSourceLocatorImpl implements DataSourceLocator {
 	}
 
 	public void locate(Supplier<String> dsNameSupplier, Consumer<DataSource> dsConsumer) {
-		// this.dsNameSupplier = dsNameSupplier;
-		// this.dsConsumer = dsConsumer;
 		register(dsNameSupplier.get(), dsConsumer);
 	}
 

@@ -24,20 +24,19 @@ import io.reactivex.Completable;
 import io.reactivex.Single;
 import io.reactivex.functions.Consumer;
 import io.roxa.GeneralFailureException;
+import io.roxa.vertx.jdbc.JdbcManager;
 import io.vertx.config.ConfigChange;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
 import io.vertx.core.json.JsonObject;
 import io.vertx.reactivex.CompletableHelper;
-import io.vertx.reactivex.config.ConfigRetriever;
-import io.vertx.reactivex.core.AbstractVerticle;
 
 /**
  * @author Steven Chen
  *
  */
-public abstract class AbstractBootVerticle extends AbstractVerticle {
+public abstract class AbstractBootVerticle extends BaseVerticle {
 
 	private static final Logger logger = LoggerFactory.getLogger(AbstractBootVerticle.class);
 
@@ -50,19 +49,31 @@ public abstract class AbstractBootVerticle extends AbstractVerticle {
 	}
 
 	@Override
+	public void start(Promise<Void> startPromise) throws Exception {
+		start();
+		configuration().flatMapCompletable(this::deploy).subscribe(CompletableHelper.toObserver(startPromise.future()));
+	}
+
+	@Override
 	public void stop(Promise<Void> stopPromise) throws Exception {
+		stop();
 		preStop().andThen(undeployAll()).subscribe(CompletableHelper.toObserver(stopPromise.future()));
+	}
+
+	protected void setupJdbcManager() {
+		deploy(JdbcManager.instance()).subscribe(id -> {
+			logger.info("Deployed JdbcManager with id: {}", id);
+		}, e -> {
+			logger.info("Deployed JdbcManager error", e);
+		});
+	}
+
+	protected Completable deploy(JsonObject conf) {
+		return Completable.complete();
 	}
 
 	protected Completable preStop() {
 		return Completable.complete();
-	}
-
-	protected Single<JsonObject> configuration() {
-		ConfigRetriever cfgr = ConfigRetriever.create(vertx);
-		Single<JsonObject> single = cfgr.rxGetConfig();
-		cfgr.listen(this::configurationChanged);
-		return single.doOnSuccess(cfg -> logger.debug("Configuration info: {}", cfg.encodePrettily()));
 	}
 
 	protected void configurationChanged(ConfigChange change) {
@@ -70,6 +81,11 @@ public abstract class AbstractBootVerticle extends AbstractVerticle {
 		JsonObject cfgOld = change.getPreviousConfiguration();
 		logger.debug("Configuration changed, the new one is {}, prev is {}", cfgNew.encodePrettily(),
 				cfgOld.encodePrettily());
+		if (!cfgNew.equals(cfgOld)) {
+			logger.debug("Configuration change detected, the new one is {}", cfgNew.encodePrettily());
+			deploy(cfgNew).subscribe(() -> logger.info("Apply new configuration to deploy succeeded"),
+					e -> logger.error("Apply new configuration to deploy failed", e));
+		}
 	}
 
 	protected Completable redeploy(String verticleId, Verticle verticle, Consumer<? super String> doOnSuccess) {

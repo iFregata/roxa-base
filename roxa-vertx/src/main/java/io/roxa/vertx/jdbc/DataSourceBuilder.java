@@ -13,6 +13,7 @@ package io.roxa.vertx.jdbc;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
+import io.roxa.util.DESedeCipher;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -20,6 +21,9 @@ import io.vertx.core.json.JsonObject;
  *
  */
 public abstract class DataSourceBuilder {
+
+	private static final String desedeKey = "qdGEYSg9ZGSbWKZaVj7e8w59boVKGmWG";
+	private static final String desedeIv = "jaZoxSs2";
 
 	protected JsonObject config;
 
@@ -49,7 +53,12 @@ public abstract class DataSourceBuilder {
 	}
 
 	protected String getPass() {
-		return config.getString("pass");
+		String pass = config.getString("pass");
+		boolean encrypted = config.getBoolean("encrypted", false);
+		if (encrypted) {
+			return decryptPass(pass);
+		}
+		return pass;
 	}
 
 	protected int getPort() {
@@ -80,5 +89,11 @@ public abstract class DataSourceBuilder {
 		int leakTraceInterval = getLeakTraceInterval();
 		if (leakTraceInterval > 5000)
 			cfg.setLeakDetectionThreshold(leakTraceInterval);
+	}
+
+	private static String decryptPass(String encryptedPass) {
+		String[] rs = new DESedeCipher(false).cbc().pkcs5().plainIV(desedeIv).key(desedeKey)
+				.content(encryptedPass, true).doFinal();
+		return rs[0];
 	}
 }

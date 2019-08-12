@@ -21,10 +21,14 @@ import org.slf4j.LoggerFactory;
 import io.reactivex.Completable;
 import io.reactivex.Single;
 import io.roxa.util.Strings;
+import io.vertx.config.ConfigChange;
+import io.vertx.config.ConfigRetrieverOptions;
+import io.vertx.config.ConfigStoreOptions;
 import io.vertx.core.Promise;
 import io.vertx.core.impl.ConcurrentHashSet;
 import io.vertx.core.json.JsonObject;
 import io.vertx.reactivex.CompletableHelper;
+import io.vertx.reactivex.config.ConfigRetriever;
 import io.vertx.reactivex.core.AbstractVerticle;
 import io.vertx.reactivex.core.http.HttpServer;
 import io.vertx.reactivex.servicediscovery.ServiceDiscovery;
@@ -38,14 +42,35 @@ import io.vertx.servicediscovery.types.HttpEndpoint;
 public abstract class BaseVerticle extends AbstractVerticle {
 
 	private static final Logger logger = LoggerFactory.getLogger(BaseVerticle.class);
-
 	protected ServiceDiscovery discovery;
 	protected Set<Record> registeredRecords = new ConcurrentHashSet<>();
 
 	@Override
 	public void stop(Promise<Void> stopPromise) throws Exception {
+		stop();
 		tearDownServiceDiscovery().andThen(closeResources())
 				.subscribe(CompletableHelper.toObserver(stopPromise.future()));
+	}
+
+	protected Single<JsonObject> configuration(String cfgLocation) {
+		ConfigStoreOptions fileStore = new ConfigStoreOptions().setType("file").setOptional(true)
+				.setConfig(new JsonObject().put("path", cfgLocation));
+		ConfigRetrieverOptions options = new ConfigRetrieverOptions().addStore(fileStore);
+		ConfigRetriever cfgr = ConfigRetriever.create(vertx, options);
+		Single<JsonObject> single = cfgr.rxGetConfig();
+		cfgr.listen(this::configurationChanged);
+		return single.doOnSuccess(cfg -> logger.debug("Configuration info: {}", cfg.encodePrettily()));
+	}
+
+	protected Single<JsonObject> configuration() {
+		ConfigRetriever cfgr = ConfigRetriever.create(vertx);
+		Single<JsonObject> single = cfgr.rxGetConfig();
+		cfgr.listen(this::configurationChanged);
+		return single.doOnSuccess(cfg -> logger.debug("Configuration info: {}", cfg.encodePrettily()));
+	}
+
+	protected void configurationChanged(ConfigChange change) {
+
 	}
 
 	protected Completable closeResources() {
@@ -65,9 +90,9 @@ public abstract class BaseVerticle extends AbstractVerticle {
 	}
 
 	protected Completable tearDownServiceDiscovery() {
-		logger.info("Prepare to tear down the service discovery");
 		if (discovery == null)
 			return Completable.complete();
+		logger.info("Prepare to tear down the service discovery");
 		List<Completable> completables = new ArrayList<>();
 		registeredRecords.forEach(record -> {
 			String reg = record.getRegistration();
