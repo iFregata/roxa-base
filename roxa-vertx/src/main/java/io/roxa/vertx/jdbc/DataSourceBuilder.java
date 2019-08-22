@@ -27,7 +27,7 @@ public abstract class DataSourceBuilder {
 
 	protected JsonObject config;
 
-	static DataSourceBuilder create(JsonObject config) {
+	public static DataSourceBuilder create(JsonObject config) {
 		String vendor = config.getString("vendor");
 		switch (vendor) {
 		case "mysql":

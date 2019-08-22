@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +25,7 @@ import io.reactivex.Completable;
 import io.reactivex.Single;
 import io.reactivex.functions.Consumer;
 import io.roxa.GeneralFailureException;
-import io.roxa.vertx.jdbc.JdbcManager;
+import io.roxa.vertx.rx.jdbc.JdbcManager;
 import io.vertx.config.ConfigChange;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
@@ -131,6 +132,23 @@ public abstract class AbstractBootVerticle extends BaseVerticle {
 			}
 		});
 		return Completable.merge(list).andThen(deploy(verticle)).ignoreElement();
+	}
+
+	protected Completable redeploy(Verticle... verticles) {
+		if (verticles == null || verticles.length == 0)
+			return Completable.complete();
+		List<Completable> list = new ArrayList<>();
+		String name = verticles[0].getClass().getName();
+		deploymentIds.entrySet().stream().forEach(e -> {
+			if (name.equals(e.getValue())) {
+				list.add(undeploy(e.getKey()));
+			}
+		});
+		return Completable.merge(list).andThen(Completable.defer(() -> {
+			List<Completable> dlist = Stream.of(verticles).map(v -> deploy(v).ignoreElement())
+					.collect(Collectors.toList());
+			return Completable.merge(dlist);
+		}));
 	}
 
 	protected Single<String> deploy(Supplier<Verticle> supplier, Class<? extends Verticle> verticleClass,

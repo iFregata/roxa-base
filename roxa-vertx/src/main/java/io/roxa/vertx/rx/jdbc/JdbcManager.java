@@ -8,7 +8,7 @@
  *       http://mit-license.org/
  *       
  */
-package io.roxa.vertx.jdbc;
+package io.roxa.vertx.rx.jdbc;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import com.zaxxer.hikari.HikariDataSource;
 
 import io.reactivex.Completable;
+import io.roxa.vertx.jdbc.DataSourceBuilder;
 import io.roxa.vertx.rx.BaseVerticle;
 import io.vertx.config.ConfigChange;
 import io.vertx.core.Promise;
@@ -33,7 +34,6 @@ import io.vertx.core.json.JsonObject;
  * @author Steven Chen
  *
  */
-@Deprecated
 public class JdbcManager extends BaseVerticle {
 
 	private static final Logger logger = LoggerFactory.getLogger(JdbcManager.class);
@@ -117,7 +117,7 @@ public class JdbcManager extends BaseVerticle {
 				promise.fail(e);
 			}
 		}).ignoreElement().subscribe(() -> {
-			logger.error("Register JdbcManager consumer succeeded");
+			logger.info("Register JdbcManager consumer succeeded");
 		}, e -> {
 			logger.error("Register JdbcManager consumer error", e);
 		});
