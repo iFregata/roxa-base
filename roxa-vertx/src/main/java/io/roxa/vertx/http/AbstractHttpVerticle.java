@@ -52,7 +52,6 @@ import io.vertx.ext.healthchecks.Status;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import io.vertx.ext.web.handler.CookieHandler;
 import io.vertx.ext.web.handler.CorsHandler;
 import io.vertx.ext.web.handler.ResponseContentTypeHandler;
 import io.vertx.ext.web.handler.SessionHandler;
@@ -214,7 +213,6 @@ public abstract class AbstractHttpVerticle extends BaseVerticle {
 	 * @param sessionMapName
 	 */
 	protected void setupLocalSession(Router router, String sessionMapName) {
-		router.route().handler(CookieHandler.create());
 		router.route().handler(SessionHandler.create(LocalSessionStore.create(vertx, sessionMapName)));
 		logger.debug("Local session enabled: {}", sessionMapName);
 	}
@@ -226,7 +224,6 @@ public abstract class AbstractHttpVerticle extends BaseVerticle {
 	 * @param sessionMapName
 	 */
 	protected void setupClusteredSession(Router router, String sessionMapName) {
-		router.route().handler(CookieHandler.create());
 		router.route().handler(SessionHandler.create(ClusteredSessionStore.create(vertx, sessionMapName)));
 		logger.debug("Clustered session enabled: {}", sessionMapName);
 	}

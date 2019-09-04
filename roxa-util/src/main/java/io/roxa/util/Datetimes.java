@@ -12,6 +12,7 @@ package io.roxa.util;
 
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
@@ -45,6 +46,10 @@ public class Datetimes {
 	private static final Pattern DATETIME_LOCAL = Pattern
 			.compile("^\\d{4}-(?:0[0-9]|1[0-2])-[0-9]{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?$");
 
+	public static void main(String[] args) {
+		System.out.println(currentLocalDate(System.currentTimeMillis()));
+	}
+
 	/**
 	 * 
 	 * @param zValue - UTC/GMT time string e.g. 2011-12-03T10:15:30Z
@@ -69,6 +74,23 @@ public class Datetimes {
 			return Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
 		}
 		throw new IllegalStateException("Malformed date time string");
+	}
+
+	/**
+	 * 
+	 * @return - Local date string e.g. 20111203
+	 */
+	public static String currentLocalDate() {
+		return LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
+	}
+
+	/**
+	 * 
+	 * @return - Local date string e.g. 20111203
+	 */
+	public static String currentLocalDate(long timeMillis) {
+		return LocalDateTime.ofInstant(Instant.ofEpochMilli(timeMillis), ZoneId.systemDefault())
+				.format(DateTimeFormatter.BASIC_ISO_DATE);
 	}
 
 	/**
@@ -103,6 +125,14 @@ public class Datetimes {
 	 */
 	public static String asZString(Date date) {
 		return DateTimeFormatter.ISO_INSTANT.format(date.toInstant().truncatedTo(ChronoUnit.SECONDS));
+	}
+
+	/**
+	 * 
+	 * @return - The local time-millis at start of day
+	 */
+	public static Long startOfDayInMillis() {
+		return LocalDate.now().atStartOfDay(ZONE_ID_UTC8).toInstant().toEpochMilli();
 	}
 
 	/**
