@@ -1,1 +1,8 @@
+# 2019-09-05 
+
+. Adds the MySQL Driver 8
+. Adds the Moments class to handle calender and date time
+
+# 2019-09-01 Upgrade the Vert.x to 3.8.1
+
 # 2019-08-05 Upgrade the Vert.x to 3.8.0
