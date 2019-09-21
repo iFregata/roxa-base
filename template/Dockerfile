@@ -1,4 +1,4 @@
-# tag: roxa/parkletx:latest
+# tag: roxa/myapp:latest
 FROM roxa/java:8u212
 LABEL maintainer="steven@abacus.com.cn"
 
@@ -12,7 +12,7 @@ ENV ARTIFACT_FILE $ARTIFACT_ID-$ARTIFACT_VERSION-fat.jar
 EXPOSE 8787
 
 COPY target/$ARTIFACT_FILE $ARTIFACT_HOME/
-COPY conf $ARTIFACT_CFG_LOCATION/
+COPY deploy/conf $ARTIFACT_CFG_LOCATION/
 COPY src/main/resources/log4j2.xml $ARTIFACT_CFG_LOCATION/
 COPY docker-entrypoint.sh $ARTIFACT_HOME/
 

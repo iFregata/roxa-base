@@ -1,0 +1,6 @@
+{
+	"name": "My Server Name",
+	"http_endpoint": "my-server-endpoint",
+	"port": 8181,
+	"context_path": "/myservice"
+}

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Don't forget to set system property to make all loggers asynchronous. 
+	-Dlog4j2.contextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector 
+	-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory -->
+<Configuration status="warn" monitorInterval="30">
+	<Properties>
+		<Property name="pattern">%d{ISO8601} | %-5.5p | %-16.16t | %-32.32c{1} | %m%n</Property>
+	</Properties>
+	<Appenders>
+		<RollingRandomAccessFile name="errorLogFile"
+			fileName="logs/app-error.log"
+			filePattern="logs/$${date:yyyy-MM}/app-error-%d{yyyy-MM-dd}-%i.log.gz">
+			<LevelRangeFilter minLevel="error" maxLevel="error"
+				onMatch="accept" onMismatch="deny" />
+			<PatternLayout pattern="${pattern}" />
+			<Policies>
+				<TimeBasedTriggeringPolicy />
+				<SizeBasedTriggeringPolicy size="20 MB" />
+			</Policies>
+			<DefaultRolloverStrategy max="10" />
+		</RollingRandomAccessFile>
+		<RollingRandomAccessFile name="generalLogFile"
+			fileName="logs/app.log"
+			filePattern="logs/$${date:yyyy-MM}/app-%d{yyyy-MM-dd}-%i.log.gz">
+			<PatternLayout pattern="${pattern}" />
+			<Policies>
+				<TimeBasedTriggeringPolicy />
+				<SizeBasedTriggeringPolicy size="20 MB" />
+			</Policies>
+			<DefaultRolloverStrategy max="10" />
+		</RollingRandomAccessFile>
+		<Console name="console" target="system_out">
+			<PatternLayout pattern="${pattern}" />
+		</Console>
+	</Appenders>
+	<Loggers>
+		<!-- 
+		<Logger name="org.apache.kafka" level="WARN"/>
+    	<Logger name="org.apache.kafka.common.metrics" level="WARN"/>
+    	 -->
+		<Logger name="io.roxa" level="${env:APP_LOG_LEVEL:-debug}" additivity="false">
+			<AppenderRef ref="errorLogFile" />
+			<AppenderRef ref="generalLogFile" />
+			<AppenderRef ref="console" />
+		</Logger>
+		<Root level="${env:APP_LOG_LEVEL:-debug}">
+			<AppenderRef ref="generalLogFile" />
+			<AppenderRef ref="console" />
+		</Root>
+	</Loggers>
+</Configuration>
