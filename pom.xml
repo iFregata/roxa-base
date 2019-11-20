@@ -17,7 +17,7 @@
   </scm>
 
 	<properties>
-		<vertx.version>3.8.1</vertx.version>
+		<vertx.version>3.8.2</vertx.version>
 	</properties>
 
 	<dependencyManagement>

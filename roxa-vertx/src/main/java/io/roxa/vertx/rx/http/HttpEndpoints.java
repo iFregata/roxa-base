@@ -232,7 +232,7 @@ public final class HttpEndpoints {
 				payload == null ? "NIL" : payload.encode());
 		if (circuitBreaker != null)
 			return SingleHelper.toSingle(handler -> {
-				circuitBreaker.executeCommand(future -> {
+				circuitBreaker.execute(future -> {
 					logger.info("{} running with CiruitBreaker", httpMethod.toUpperCase());
 					request(queryParams, headers, uri, httpMethod, payload).subscribe(SingleHelper.toObserver(future));
 				}, handler);
