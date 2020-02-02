@@ -25,6 +25,7 @@ import io.reactivex.Completable;
 import io.reactivex.Single;
 import io.reactivex.functions.Consumer;
 import io.roxa.GeneralFailureException;
+import io.roxa.vertx.rx.cron.CronSchedulerVerticle;
 import io.roxa.vertx.rx.jdbc.JdbcManager;
 import io.vertx.config.ConfigChange;
 import io.vertx.core.DeploymentOptions;
@@ -66,6 +67,14 @@ public abstract class AbstractBootVerticle extends BaseVerticle {
 			logger.info("Deployed JdbcManager with id: {}", id);
 		}, e -> {
 			logger.info("Deployed JdbcManager error", e);
+		});
+	}
+
+	protected void setupCronScheduler() {
+		deploy(CronSchedulerVerticle.instance()).subscribe(id -> {
+			logger.info("Deployed CronScheduler with id: {}", id);
+		}, e -> {
+			logger.info("Deployed CronScheduler error", e);
 		});
 	}
 
