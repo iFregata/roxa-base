@@ -23,7 +23,7 @@ public class Money {
 
 	public static Double currencyHalfUp(Double d) {
 		if (d == null) {
-			return 0d;
+			return null;
 		}
 		BigDecimal bd = new BigDecimal(d);
 		return bd.setScale(DECIMALS, ROUNDING_MODE).doubleValue();
@@ -31,7 +31,7 @@ public class Money {
 
 	public static Double currencyHalfDown(Double d) {
 		if (d == null) {
-			return 0d;
+			return null;
 		}
 		BigDecimal bd = new BigDecimal(d);
 		return bd.setScale(DECIMALS, BigDecimal.ROUND_HALF_DOWN).doubleValue();
@@ -39,7 +39,7 @@ public class Money {
 
 	public static Double currencyHalfEven(Double d) {
 		if (d == null) {
-			return 0d;
+			return null;
 		}
 		BigDecimal bd = new BigDecimal(d);
 		return bd.setScale(DECIMALS, BigDecimal.ROUND_HALF_EVEN).doubleValue();
@@ -48,49 +48,59 @@ public class Money {
 	public static BigDecimal asCurrency(String currencyStr) {
 		String _cur = Strings.emptyAsNull(currencyStr);
 		if (_cur == null)
-			return BigDecimal.ZERO;
+			return null;
 		try {
 			return rounded(new BigDecimal(_cur));
 		} catch (NumberFormatException e) {
-			return BigDecimal.ZERO;
+			return null;
 		}
 	}
 
 	public static BigDecimal asCurrencyFactor100(String currencyStr) {
 		String _cur = Strings.emptyAsNull(currencyStr);
 		if (_cur == null)
-			return BigDecimal.ZERO;
+			return null;
 		try {
 			BigDecimal _temp = rounded(new BigDecimal(_cur));
 			if (_temp.abs().compareTo(CURRENCY_FACTOR_100) < 0)
-				return BigDecimal.ZERO;
+				return null;
 			return _temp.divide(CURRENCY_FACTOR_100, ROUNDING_MODE);
 		} catch (NumberFormatException e) {
-			return BigDecimal.ZERO;
+			return null;
 		}
 	}
 
 	public static BigDecimal asYuanAmount(Integer amount) {
+		if (amount == null)
+			return null;
 		BigDecimal b = new BigDecimal(amount);
 		return b.divide(CURRENCY_FACTOR_100, 2, BigDecimal.ROUND_HALF_UP);
 	}
 
 	public static BigDecimal asYuanAmount(String amount) {
+		if (amount == null)
+			return null;
 		BigDecimal b = new BigDecimal(amount);
 		return b.divide(CURRENCY_FACTOR_100, 2, BigDecimal.ROUND_HALF_UP);
 	}
 
 	public static Integer asFenAmount(Double amount) {
+		if (amount == null)
+			return null;
 		BigDecimal b = new BigDecimal(amount);
 		return rounded(b.multiply(CURRENCY_FACTOR_100)).intValue();
 	}
 
 	public static Integer asFenAmount(String amount) {
+		if (amount == null)
+			return null;
 		BigDecimal b = new BigDecimal(amount);
 		return rounded(b.multiply(CURRENCY_FACTOR_100)).intValue();
 	}
 
 	private static BigDecimal rounded(BigDecimal aNumber) {
+		if (aNumber == null)
+			return null;
 		return aNumber.setScale(DECIMALS, ROUNDING_MODE);
 	}
 }

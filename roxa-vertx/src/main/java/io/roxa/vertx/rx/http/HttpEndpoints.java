@@ -63,8 +63,17 @@ public final class HttpEndpoints {
 		return new HttpEndpoints(vertx);
 	}
 
+	public static HttpEndpoints create(Vertx vertx) {
+		return new HttpEndpoints(vertx);
+	}
+
 	private HttpEndpoints(io.vertx.core.Vertx vertx) {
 		this.vertx = Vertx.newInstance(vertx);
+		this.options = new JsonObject();
+	}
+
+	private HttpEndpoints(Vertx vertx) {
+		this.vertx = vertx;
 		this.options = new JsonObject();
 	}
 
@@ -124,20 +133,38 @@ public final class HttpEndpoints {
 		return this;
 	}
 
-	public Single<JsonObject> get() {
-		return get(null);
+//	public Single<JsonObject> get() {
+//		return get(null, false);
+//	}
+
+//	public Single<JsonObject> get(JsonObject payload) {
+//		return get(payload, false);
+//	}
+
+	public Single<JsonObject> get(boolean... plainBody) {
+//		if (plainBody == null || plainBody.length == 0)
+//			return get(null, plainBody[0]);
+		return get(null, plainBody);
 	}
 
-	public Single<JsonObject> get(JsonObject payload) {
+	public Single<JsonObject> get(JsonObject payload, boolean... plainBody) {
 		return request("get", payload);
 	}
 
-	public Single<JsonObject> post() {
-		return post(null);
+//	public Single<JsonObject> post() {
+//		return post(null);
+//	}
+
+	public Single<JsonObject> post(boolean... plainBody) {
+		return post(null, plainBody);
 	}
 
-	public Single<JsonObject> post(JsonObject payload) {
-		return request("post", payload);
+//	public Single<JsonObject> post(JsonObject payload,) {
+//		return post(payload, false);
+//	}
+
+	public Single<JsonObject> post(JsonObject payload, boolean... plainBody) {
+		return request("post", payload, plainBody);
 	}
 
 	public Single<JsonObject> patch() {
@@ -220,7 +247,7 @@ public final class HttpEndpoints {
 		return promise.future();
 	}
 
-	private Single<JsonObject> request(String httpMethod, JsonObject payload) {
+	private Single<JsonObject> request(String httpMethod, JsonObject payload, boolean... plainBody) {
 		String uri = composeUriWithPathParams();
 		JsonObject queryParams = getQueryParams();
 		JsonObject headers = getHeaders();
@@ -234,24 +261,45 @@ public final class HttpEndpoints {
 			return SingleHelper.toSingle(handler -> {
 				circuitBreaker.execute(future -> {
 					logger.info("{} running with CiruitBreaker", httpMethod.toUpperCase());
-					request(queryParams, headers, uri, httpMethod, payload).subscribe(SingleHelper.toObserver(future));
+					request(queryParams, headers, uri, httpMethod, payload, plainBody)
+							.subscribe(SingleHelper.toObserver(future));
 				}, handler);
 			});
-		return request(queryParams, headers, uri, httpMethod, payload);
+		return request(queryParams, headers, uri, httpMethod, payload, plainBody);
 	}
 
 	private Single<JsonObject> request(JsonObject queryParams, JsonObject headers, String uri, String httpMethod,
-			JsonObject payload) {
+			JsonObject payload, boolean... plainBody) {
+
 		return getEndpoint().flatMap(client -> {
+			boolean isPlainBody = (plainBody != null && plainBody.length != 0);
 			HttpRequest<Buffer> request = switchHttpMethod(client, httpMethod, uri);
 			bindQueryParam(queryParams, request);
 			bindHeader(headers, request);
-			request.expect(ResponsePredicate.SC_SUCCESS).expect(ResponsePredicate.JSON);
+			request.expect(ResponsePredicate.SC_SUCCESS);
+			if (isPlainBody) {
+				Single<HttpResponse<String>> requestObr = null;
+				if (payload != null && !payload.isEmpty()) {
+					requestObr = request.as(BodyCodec.string()).rxSendJsonObject(payload);
+				} else {
+					requestObr = request.as(BodyCodec.string()).rxSend();
+				}
+				return requestObr.map(response -> new JsonObject().put("plain", response.body())).doOnError(e -> {
+					logger.error("Could not complete HTTPEndpoint request!", e);
+				}).doFinally(() -> {
+					if (discovery != null && client != null) {
+						ServiceDiscovery.releaseServiceObject(discovery, client);
+					}
+					logger.debug("Release the HTTPEndpoint service object");
+					clear();
+				});
+			}
 			Single<HttpResponse<JsonObject>> requestObr = null;
-			if (payload != null && !payload.isEmpty())
+			if (payload != null && !payload.isEmpty()) {
 				requestObr = request.as(BodyCodec.jsonObject()).rxSendJsonObject(payload);
-			else
+			} else {
 				requestObr = request.as(BodyCodec.jsonObject()).rxSend();
+			}
 			return requestObr.map(response -> response.body()).doOnError(e -> {
 				logger.error("Could not complete HTTPEndpoint request!", e);
 			}).doFinally(() -> {

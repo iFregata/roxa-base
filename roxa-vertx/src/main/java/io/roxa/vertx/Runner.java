@@ -17,6 +17,7 @@ import java.nio.file.Paths;
 import java.util.function.Consumer;
 
 import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Launcher;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 
@@ -28,6 +29,13 @@ public class Runner {
 
 	private static final String JAVA_SRC_DIR = "/src/main/java/";
 	private static final String JAVA_RES_DIR = "/src/main/resources/";
+
+	public static void run(String className) {
+		Launcher.executeCommand("run", className, "--redeploy=**/*.java,**/*.json",
+				"--launcher-class=io.vertx.core.Launcher",
+				"-Dlog4j2.contextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector",
+				"-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegatFacotry");
+	}
 
 	public static void runClustered(Class<?> clazz) {
 		run(getCurrentJavaSourceDir(), clazz, true, null);

@@ -29,11 +29,18 @@ public class Moments {
 			.compile("^\\d{4}-(?:0[0-9]|1[0-2])-[0-9]{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?Z$");
 	private static final Pattern DATETIME_LOCAL = Pattern
 			.compile("^\\d{4}-(?:0[0-9]|1[0-2])-[0-9]{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?$");
+	private static final Pattern DATETIME_WITHOUT_T_FLAG = Pattern
+			.compile("^\\d{4}-(?:0[0-9]|1[0-2])-[0-9]{2} \\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?$");
 
 	private static final DateTimeFormatter compact_ISO_LOCAL_DATE_TIME = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+	private static final DateTimeFormatter withoudTFlag_ISO_LOCAL_DATE_TIME = DateTimeFormatter
+			.ofPattern("yyyy-MM-dd HH:mm:ss");
 
 	private final static ZoneId ZONE_ID_GMT = ZoneId.of("Z");// GMT, UTC
 	public final static ZoneOffset ZONE_OFFSET_GMT = ZoneOffset.of("Z");
+
+	public final static Long ONE_DAY_MILLIS = 24 * 60 * 60 * 1000L;
+	public final static Long ONE_DAY_SECONDS = 24 * 60 * 60L;
 
 	public static void main(String[] args) {
 		System.out.println(zstrDateTimeSec(currentTimeSeconds()));
@@ -99,6 +106,73 @@ public class Moments {
 
 	/**
 	 * 
+	 * @param localValue - Local time string e.g. 2011-12-03 10:15:30
+	 * @return
+	 */
+	public static Date asDateWithoutTFlag(String localValue) {
+		if (DATETIME_WITHOUT_T_FLAG.matcher(localValue).matches()) {
+			LocalDateTime ldt = LocalDateTime.parse(localValue, withoudTFlag_ISO_LOCAL_DATE_TIME);
+			return Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+		}
+		throw new IllegalStateException("Malformed date time string");
+	}
+
+	/**
+	 * 
+	 * @param strCompactDateTimeSec - 20111203101530
+	 * @return
+	 */
+	public static Long asEpochSecondsFromCompactStr(String strCompactDateTimeSec) {
+		return LocalDateTime.parse(strCompactDateTimeSec, compact_ISO_LOCAL_DATE_TIME).atZone(ZoneId.systemDefault())
+				.toEpochSecond();
+	}
+
+	/**
+	 * 
+	 * @param strCompactDateTimeSec - 20111203101530
+	 * @return
+	 */
+	public static Long asEpochMillisFromCompactStr(String strCompactDateTimeSec) {
+		return asEpochSecondsFromCompactStr(strCompactDateTimeSec) * 1000;
+	}
+
+	/**
+	 * 
+	 * @param localValue - Local time string e.g. 2011-12-03T10:15:30
+	 * @return epochSeconds
+	 */
+	public static Long asEpochSeconds(String localValue) {
+		if (DATETIME_LOCAL.matcher(localValue).matches()) {
+			LocalDateTime ldt = LocalDateTime.parse(localValue, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+			return ldt.atZone(ZoneId.systemDefault()).toEpochSecond();
+		}
+		throw new IllegalStateException("Malformed date time string");
+	}
+
+	/**
+	 * 
+	 * @param localValue - Local time string e.g. 2011-12-03T10:15:30
+	 * @return epochSeconds
+	 */
+	public static Long asEpochMillis(String localValue) {
+		return asEpochMillis(localValue) * 100;
+	}
+
+	/**
+	 * 
+	 * @param localValue - Local time string e.g. 2011-12-03 10:15:30
+	 * @return epochSeconds
+	 */
+	public static Long asEpochSecondsWithoutTFlag(String localValue) {
+		if (DATETIME_WITHOUT_T_FLAG.matcher(localValue).matches()) {
+			LocalDateTime ldt = LocalDateTime.parse(localValue, withoudTFlag_ISO_LOCAL_DATE_TIME);
+			return ldt.atZone(ZoneId.systemDefault()).toEpochSecond();
+		}
+		throw new IllegalStateException("Malformed date time string");
+	}
+
+	/**
+	 * 
 	 * @return - Local date string e.g. 20111203
 	 */
 	public static String currentDate() {
@@ -110,7 +184,7 @@ public class Moments {
 	 * @return - Local date time string e.g. 2019-09-05T15:27:23
 	 */
 	public static String currentDateTime() {
-		return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+		return DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
 	}
 
 	/**
@@ -118,7 +192,7 @@ public class Moments {
 	 * @return - Local date time compacted string e.g. 20190905152723
 	 */
 	public static String currentCompactDateTime() {
-		return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS).format(compact_ISO_LOCAL_DATE_TIME);
+		return DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
 	}
 
 	/**
@@ -126,8 +200,8 @@ public class Moments {
 	 * @return - Local date string e.g. 20111203
 	 */
 	public static String strDate(Long timeMillis) {
-		return LocalDateTime.ofInstant(Instant.ofEpochMilli(timeMillis), ZoneId.systemDefault())
-				.format(DateTimeFormatter.BASIC_ISO_DATE);
+		return DateTimeFormatter.BASIC_ISO_DATE
+				.format(LocalDateTime.ofInstant(Instant.ofEpochMilli(timeMillis), ZoneId.systemDefault()));
 	}
 
 	/**
@@ -135,8 +209,8 @@ public class Moments {
 	 * @return - Local date string e.g. 20111203
 	 */
 	public static String strDateSec(Long second) {
-		return LocalDateTime.ofInstant(Instant.ofEpochSecond(second), ZoneId.systemDefault())
-				.format(DateTimeFormatter.BASIC_ISO_DATE);
+		return DateTimeFormatter.BASIC_ISO_DATE
+				.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(second), ZoneId.systemDefault()));
 	}
 
 	/**
@@ -145,8 +219,8 @@ public class Moments {
 	 * @return
 	 */
 	public static String strDateTime(Long timeMillis) {
-		return LocalDateTime.ofInstant(Instant.ofEpochMilli(timeMillis), ZoneId.systemDefault())
-				.truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+		return DateTimeFormatter.ISO_LOCAL_DATE_TIME
+				.format(LocalDateTime.ofInstant(Instant.ofEpochMilli(timeMillis), ZoneId.systemDefault()));
 	}
 
 	/**
@@ -155,8 +229,8 @@ public class Moments {
 	 * @return
 	 */
 	public static String strDateTimeSec(Long second) {
-		return LocalDateTime.ofInstant(Instant.ofEpochSecond(second), ZoneId.systemDefault())
-				.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+		return DateTimeFormatter.ISO_LOCAL_DATE_TIME
+				.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(second), ZoneId.systemDefault()));
 	}
 
 	/**
@@ -165,8 +239,8 @@ public class Moments {
 	 * @return - Local date time compacted string e.g. 20190905152723
 	 */
 	public static String strCompactDateTime(Long timeMillis) {
-		return LocalDateTime.ofInstant(Instant.ofEpochMilli(timeMillis), ZoneId.systemDefault())
-				.truncatedTo(ChronoUnit.SECONDS).format(compact_ISO_LOCAL_DATE_TIME);
+		return compact_ISO_LOCAL_DATE_TIME.format(LocalDateTime
+				.ofInstant(Instant.ofEpochMilli(timeMillis), ZoneId.systemDefault()).truncatedTo(ChronoUnit.SECONDS));
 	}
 
 	/**
@@ -175,8 +249,8 @@ public class Moments {
 	 * @return - Local date time compacted string e.g. 20190905152723
 	 */
 	public static String strCompactDateTimeSec(Long second) {
-		return LocalDateTime.ofInstant(Instant.ofEpochSecond(second), ZoneId.systemDefault())
-				.format(compact_ISO_LOCAL_DATE_TIME);
+		return compact_ISO_LOCAL_DATE_TIME
+				.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(second), ZoneId.systemDefault()));
 	}
 
 	/**
