@@ -48,32 +48,32 @@ public abstract class EventActionDispatcher extends AbstractVerticle {
 
 	protected JdbcExecutor jdbc;
 
-	protected String eventBusAddress;
+	protected String eventBusURN;
 
 	protected String dataSourceName;
 
 	/**
 	 * 
-	 * @param eventBusAddress
+	 * @param eventBusURN
 	 */
-	public EventActionDispatcher(String eventBusAddress) {
-		this(eventBusAddress, null);
+	public EventActionDispatcher(String eventBusURN) {
+		this(eventBusURN, null);
 	}
 
 	/**
 	 * 
-	 * @param eventBusAddress
+	 * @param eventBusURN
 	 * @param dataSourceName
 	 */
-	public EventActionDispatcher(String eventBusAddress, String dataSourceName) {
-		this.eventBusAddress = eventBusAddress;
+	public EventActionDispatcher(String eventBusURN, String dataSourceName) {
+		this.eventBusURN = eventBusURN;
 		this.dataSourceName = dataSourceName;
 	}
 
 	@Override
 	public void start(Promise<Void> startPromise) throws Exception {
-		if (eventBusAddress != null)
-			vertx.eventBus().consumer(eventBusAddress, this::dispatch);
+		if (eventBusURN != null)
+			vertx.eventBus().consumer(eventBusURN, this::dispatch);
 		if (dataSourceName != null)
 			JdbcManager.register(dataSourceName, this::setJdbc);
 		didSetupDispatch();
@@ -119,7 +119,7 @@ public abstract class EventActionDispatcher extends AbstractVerticle {
 		String action = msg.headers().get(EVENT_HEADER_ACTION);
 		String style = msg.headers().get(EVENT_HEADER_STYLE);
 		boolean needsToReply = EVENT_STYLE_REQUEST.equals(style);
-		String actionSignature = String.format("%s#%s", this.eventBusAddress, action);
+		String actionSignature = String.format("%s#%s", this.eventBusURN, action);
 		Class<? extends EventActionDispatcher> clazz = this.getClass();
 		Object params = msg.body();
 		try {
