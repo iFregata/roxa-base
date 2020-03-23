@@ -34,6 +34,9 @@ import io.vertx.reactivex.core.eventbus.EventBus;
 public class CronScheduler {
 
 	/**
+	 * <p>
+	 * http://www.quartz-scheduler.org/api/2.2.0/org/quartz/CronExpression.html
+	 * http://www.cronmaker.com
 	 * 
 	 * @param vertx    - The instance of Vertx
 	 * @param id       - The id of Job
