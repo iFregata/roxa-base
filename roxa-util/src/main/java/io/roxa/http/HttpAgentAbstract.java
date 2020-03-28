@@ -290,7 +290,8 @@ public abstract class HttpAgentAbstract {
 
 	protected RequestBody composeFileBody(File payload, String altFileName) {
 		MediaType mimeType = guessMimeType(payload, altFileName);
-		return RequestBody.create(mimeType, payload);
+		// return RequestBody.create(mimeType, payload);
+		return RequestBody.create(payload, mimeType);
 	}
 
 	protected RequestBody composeFormBody(HttpForm payload) {
@@ -357,7 +358,9 @@ public abstract class HttpAgentAbstract {
 	protected RequestBody requestBody(Object payload, HttpForm form) {
 		RequestBody rb = null;
 		if (payload instanceof JsonObject) {
-			rb = RequestBody.create(MEDIA_TYPE_JSON, ((JsonObject) payload).toString());
+			rb = RequestBody.create(((JsonObject) payload).toString(), MEDIA_TYPE_JSON);
+			/* Update for okhttp4.3.1 */
+			// rb = RequestBody.create(MEDIA_TYPE_JSON, ((JsonObject) payload).toString());
 		} else if (payload instanceof HttpForm) {
 			rb = composeFormBody((HttpForm) payload);
 		} else if (payload instanceof File) {
@@ -366,11 +369,13 @@ public abstract class HttpAgentAbstract {
 			else
 				rb = composeMultipartBody((File) payload, form);
 		} else if (payload instanceof HttpXmlBody) {
-			rb = RequestBody.create(MEDIA_TYPE_XML, ((HttpXmlBody) payload).xml);
+			// rb = RequestBody.create(MEDIA_TYPE_XML, ((HttpXmlBody) payload).xml);
+			rb = RequestBody.create(((HttpXmlBody) payload).xml, MEDIA_TYPE_XML);
 		} else {
 			try {
 				String jsonContent = Jsons.getMapper().writeValueAsString(payload);
-				rb = RequestBody.create(MEDIA_TYPE_JSON, jsonContent);
+				// rb = RequestBody.create(MEDIA_TYPE_JSON, jsonContent);
+				rb = RequestBody.create(jsonContent, MEDIA_TYPE_JSON);
 			} catch (JsonProcessingException e) {
 				throw new RuntimeException(e);
 			}
