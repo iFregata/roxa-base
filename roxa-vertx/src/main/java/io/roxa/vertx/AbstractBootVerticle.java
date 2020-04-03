@@ -47,7 +47,7 @@ public abstract class AbstractBootVerticle extends AbstractVerticle {
 	}
 
 	public void stop(Promise<Void> stopPromise) throws Exception {
-		preStop().compose(v -> undeployAll()).setHandler(stopPromise.future());
+		/preStop().compose(v -> undeployAll()).setHandler(stopPromise.future());
 	}
 
 	protected Future<Void> preStop() {
