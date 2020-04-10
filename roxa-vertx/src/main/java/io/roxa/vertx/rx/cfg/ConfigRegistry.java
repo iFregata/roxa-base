@@ -38,7 +38,7 @@ public class ConfigRegistry {
 	}
 
 	public Single<JsonObject> getCached() {
-		return SingleHelper.toSingle(handler -> delegate.getCached().setHandler(handler));
+		return SingleHelper.toSingle(handler -> delegate.getCached().onComplete(handler));
 	}
 
 	public String getRegistryLocation() {

@@ -37,6 +37,7 @@ import io.roxa.http.ServerSideException;
 import io.roxa.http.ServiceUnavailableException;
 import io.roxa.http.UnauthorizedException;
 import io.roxa.util.Codecs;
+import io.roxa.util.Digests;
 import io.roxa.util.Strings;
 import io.roxa.util.SysInfo;
 import io.roxa.vertx.rx.BaseVerticle;
@@ -177,6 +178,69 @@ public abstract class AbstractHttpVerticle extends BaseVerticle {
 			});
 		}).flatMap(this::setupServiceDiscovery).flatMapCompletable(this::setupHttpEndpoint)
 				.subscribe(CompletableHelper.toObserver(startPromise.future()));
+	}
+
+	protected Single<JsonObject> authorize(RoutingContext rc, JsonObject authPolicy) {
+		String method = rc.request().method().name();
+		String absoluteURI = rc.request().absoluteURI();
+		String uri = rc.request().uri();
+		String path = rc.request().path();
+		JsonObject requestInfo = new JsonObject().put("http_verb", method).put("abs_uri", absoluteURI).put("uri", uri)
+				.put("path", path);
+		logger.debug("Authorize, requestInfo: {}, auth policy: {}", requestInfo.encode(),
+				authPolicy == null ? "NIL" : authPolicy.encode());
+		if (authPolicy == null || authPolicy.isEmpty())
+			return Single.just(new JsonObject());
+		String mode = authPolicy.getString("mode", "base");
+		if ("bypass".equals(mode)) {
+			logger.debug("Authorizing bypass");
+			return Single.just(new JsonObject());
+		}
+		String authHeader = rc.request().getHeader("Authorization");
+		if ("base".equals(mode)) {
+			String baseSecretCode = String.format("Base %s", getAuthBaseSecretCode());
+			logger.debug("Authorizing base: {}", authHeader);
+			if (baseSecretCode == null)
+				return Single.just(new JsonObject());
+			if (baseSecretCode.equals(authHeader))
+				return Single.just(new JsonObject());
+			return Single.error(new UnauthorizedException("Authorization base secret code illegal!"));
+		}
+		logger.debug("Authorizing bearer: {}", authHeader);
+		if ("bearer".equals(mode))
+			return WebAPIs.badBearerAuthorization(authHeader, requestInfo).flatMap(asJson -> {
+				String clientId = asJson.getString("client_id");
+				JsonObject signContent = asJson.getJsonObject("content");
+				String signBase64 = asJson.getString("signature");
+				return getClientRegister(clientId).flatMap(clientRegister -> {
+					if (clientRegister == null || clientRegister.isEmpty())
+						return Single.error(new UnauthorizedException("Authorization client illegal!"));
+					String clientKey = clientRegister.getString("client_key", null);
+					if (clientKey == null)
+						return Single.error(new UnauthorizedException("Authorization client key illegal!"));
+					if (!Digests.digestVerifyBase64PlainKeyUrlSafe(signBase64, clientKey, signContent.encode()))
+						return Single.error(new UnauthorizedException("Authorization signature illegal!"));
+					return Single.just(asJson.copy().put("client_register", clientRegister));
+				});
+			});
+		return Single.error(new ServiceUnavailableException("Authorization mode illegal!"));
+	}
+
+	/**
+	 * 
+	 * @param clientId
+	 * @return
+	 */
+	protected Single<JsonObject> getClientRegister(String clientId) {
+		return Single.just(new JsonObject());
+	}
+
+	/**
+	 * 
+	 * @return
+	 */
+	protected String getAuthBaseSecretCode() {
+		return null;
 	}
 
 	/**
@@ -545,4 +609,5 @@ public abstract class AbstractHttpVerticle extends BaseVerticle {
 		return String.format("%s/%s?cause=%s", baseUrl, "/error.html",
 				Codecs.urlEncode(new JsonObject().put("level", level).put("text", causeText).encode()));
 	}
+
 }

@@ -21,10 +21,10 @@ import org.slf4j.LoggerFactory;
 import io.reactivex.Single;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.net.SocketAddress;
 import io.vertx.reactivex.core.Vertx;
 import io.vertx.reactivex.redis.client.Redis;
 import io.vertx.reactivex.redis.client.RedisAPI;
+import io.vertx.reactivex.redis.client.RedisConnection;
 import io.vertx.reactivex.redis.client.Response;
 import io.vertx.redis.client.RedisClientType;
 import io.vertx.redis.client.RedisOptions;
@@ -197,7 +197,7 @@ public class RedisExecutor {
 
 	}
 
-	private static Single<Redis> createRedisClient(Vertx vertx, JsonObject conf) {
+	private static Single<RedisConnection> createRedisClient(Vertx vertx, JsonObject conf) {
 		RedisOptions redisOptions = new RedisOptions();
 		JsonArray redisGroup = conf.getJsonArray("redis_conf");
 		if (redisGroup == null || redisGroup.isEmpty())
@@ -205,17 +205,19 @@ public class RedisExecutor {
 		if (redisGroup.size() == 1) {
 			JsonObject cfg = (JsonObject) redisGroup.getJsonObject(0);
 			logger.debug("Prepare to connect redis standalone server, {}", cfg.encode());
-			return Redis.createClient(vertx, io.vertx.reactivex.core.net.SocketAddress
-					.inetSocketAddress(cfg.getInteger("port"), cfg.getString("host"))).rxConnect();
+			final String connStr = String.format("redis://%s:%d", cfg.getString("host"), cfg.getInteger("port"));
+			return Redis.createClient(vertx, connStr).rxConnect();
 		}
 		redisGroup.stream().forEach(e -> {
 			JsonObject cfg = (JsonObject) e;
-			redisOptions.addEndpoint(SocketAddress.inetSocketAddress(cfg.getInteger("port"), cfg.getString("host")));
+			final String connStr = String.format("redis://%s:%d", cfg.getString("host"), cfg.getInteger("port"));
+			redisOptions.addConnectionString(connStr);
 			redisOptions.setType(RedisClientType.CLUSTER);
 			redisOptions.setRole(RedisRole.MASTER);
 		});
 		logger.debug("Prepare to connect redis cluster servers, {}", redisGroup.encode());
 		return Redis.createClient(vertx, redisOptions).rxConnect();
+		// return Redis.createClient(vertx, redisOptions).rxConnect();
 	}
 
 	private static List<String> hmsetLeteral(String key, JsonObject data) {

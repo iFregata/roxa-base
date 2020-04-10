@@ -38,20 +38,20 @@ public class LocalCache {
 
 	public Single<JsonObject> remove(String key) {
 		return SingleHelper.<JsonObject>toSingle(handler -> {
-			delegate.remove(key).setHandler(handler);
+			delegate.remove(key).onComplete(handler);
 		});
 
 	}
 
 	public Single<JsonObject> put(String key, Integer period, JsonObject item) {
 		return SingleHelper.<JsonObject>toSingle(handler -> {
-			delegate.put(key, period, item).setHandler(handler);
+			delegate.put(key, period, item).onComplete(handler);
 		});
 	}
 
 	public Single<JsonObject> put(String key, JsonObject item) {
 		return SingleHelper.<JsonObject>toSingle(handler -> {
-			delegate.put(key, item).setHandler(handler);
+			delegate.put(key, item).onComplete(handler);
 		});
 	}
 
@@ -65,7 +65,7 @@ public class LocalCache {
 
 	public Single<JsonObject> get(String key) {
 		return SingleHelper.<JsonObject>toSingle(handler -> {
-			delegate.get(key).setHandler(handler);
+			delegate.get(key).onComplete(handler);
 		});
 	}
 }

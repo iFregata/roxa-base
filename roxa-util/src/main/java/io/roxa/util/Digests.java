@@ -113,14 +113,14 @@ public abstract class Digests {
 	 */
 	public static boolean digestVerifyBase64PlainKey(String appSecret, String appSecretKey, String content) {
 		byte[] expectedBytes = digestPlainKey(appSecretKey, content);
-		byte[] actualBytpes = Base64.getUrlDecoder().decode(appSecret);
+		byte[] actualBytpes = Base64.getDecoder().decode(appSecret);
 		return MessageDigest.isEqual(expectedBytes, actualBytpes);
 
 	}
 
 	public static boolean digestVerifyBase64PlainKeyUrlSafe(String appSecret, String appSecretKey, String content) {
 		byte[] expectedBytes = digestPlainKey(appSecretKey, content);
-		byte[] actualBytpes = Base64.getDecoder().decode(appSecret);
+		byte[] actualBytpes = Base64.getUrlDecoder().decode(appSecret);
 		return MessageDigest.isEqual(expectedBytes, actualBytpes);
 
 	}

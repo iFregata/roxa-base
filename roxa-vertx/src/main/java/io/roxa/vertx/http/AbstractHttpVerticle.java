@@ -177,7 +177,7 @@ public abstract class AbstractHttpVerticle extends BaseVerticle {
 				}
 			});
 			return httpServerPromise.future();
-		}).compose(this::setupServiceDiscovery).compose(this::setupHttpEndpoint).setHandler(startPromise.future());
+		}).compose(this::setupServiceDiscovery).compose(this::setupHttpEndpoint).onComplete(startPromise.future());
 	}
 
 	/**

@@ -47,7 +47,7 @@ public abstract class AbstractBootVerticle extends AbstractVerticle {
 	}
 
 	public void stop(Promise<Void> stopPromise) throws Exception {
-		/preStop().compose(v -> undeployAll()).setHandler(stopPromise.future());
+		preStop().compose(v -> undeployAll()).onComplete(stopPromise.future());
 	}
 
 	protected Future<Void> preStop() {
@@ -174,7 +174,7 @@ public abstract class AbstractBootVerticle extends AbstractVerticle {
 			promise.complete();
 		} else {
 			CompositeFuture.all(deploymentIds.keySet().stream().filter(id -> vertx.deploymentIDs().contains(id))
-					.map(this::undeploy).collect(Collectors.toList())).setHandler(ar -> {
+					.map(this::undeploy).collect(Collectors.toList())).onComplete(ar -> {
 						if (ar.succeeded()) {
 							promise.complete();
 						} else {

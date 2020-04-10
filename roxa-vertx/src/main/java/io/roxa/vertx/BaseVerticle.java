@@ -41,7 +41,7 @@ public abstract class BaseVerticle extends AbstractVerticle {
 	protected Set<Record> registeredRecords = new ConcurrentHashSet<>();
 
 	public void stop(Promise<Void> stopPromise) throws Exception {
-		tearDownServiceDiscovery().compose(v -> closeResources()).setHandler(stopPromise.future());
+		tearDownServiceDiscovery().compose(v -> closeResources()).onComplete(stopPromise.future());
 	}
 
 	protected Future<Void> closeResources() {
@@ -79,7 +79,7 @@ public abstract class BaseVerticle extends AbstractVerticle {
 			closeServiceDiscovery();
 			promise.complete();
 		} else {
-			CompositeFuture.all(futures).setHandler(ar -> {
+			CompositeFuture.all(futures).onComplete(ar -> {
 				closeServiceDiscovery();
 				if (ar.failed()) {
 					promise.fail(ar.cause());

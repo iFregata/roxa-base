@@ -251,7 +251,7 @@ public final class HttpEndpoints {
 					else
 						request.as(BodyCodec.jsonObject()).send(responseHandler(promiseInternal));
 					return promiseInternal.future().map(completeHandler(client));
-				}).setHandler(promise.future());
+				}).onComplete(promise.future());
 			});
 		return getEndpoint().compose(client -> {
 			Promise<JsonObject> promise = Promise.promise();
