@@ -26,6 +26,7 @@ import io.reactivex.Single;
 import io.reactivex.functions.Consumer;
 import io.roxa.GeneralFailureException;
 import io.roxa.vertx.rx.cron.CronSchedulerVerticle;
+import io.roxa.vertx.rx.jdbc.JdbcDeployer;
 import io.roxa.vertx.rx.jdbc.JdbcManager;
 import io.vertx.config.ConfigChange;
 import io.vertx.core.DeploymentOptions;
@@ -43,6 +44,7 @@ public abstract class AbstractBootVerticle extends BaseVerticle {
 	private static final Logger logger = LoggerFactory.getLogger(AbstractBootVerticle.class);
 
 	private final Map<String, String> deploymentIds = new ConcurrentHashMap<>();
+	private final Map<String, JdbcDeployer> jdbcDeployers = new ConcurrentHashMap<>();
 
 	/**
 	 * 
@@ -53,13 +55,19 @@ public abstract class AbstractBootVerticle extends BaseVerticle {
 	@Override
 	public void start(Promise<Void> startPromise) throws Exception {
 		start();
-		configuration().flatMapCompletable(this::deploy).subscribe(CompletableHelper.toObserver(startPromise.future()));
+		configuration().flatMapCompletable(this::configure)
+				.subscribe(CompletableHelper.toObserver(startPromise.future()));
 	}
 
 	@Override
 	public void stop(Promise<Void> stopPromise) throws Exception {
+		jdbcDeployers.clear();
 		stop();
 		preStop().andThen(undeployAll()).subscribe(CompletableHelper.toObserver(stopPromise.future()));
+	}
+
+	public JdbcDeployer getJdbcDeployer(String jdbcResourceName) {
+		return jdbcDeployers.get(jdbcResourceName);
 	}
 
 	protected void setupJdbcManager() {
@@ -67,6 +75,16 @@ public abstract class AbstractBootVerticle extends BaseVerticle {
 			logger.info("Deployed JdbcManager with id: {}", id);
 		}, e -> {
 			logger.info("Deployed JdbcManager error", e);
+		});
+	}
+
+	protected void setupJdbcDeployer(String jdbcResourceName) {
+		JdbcDeployer jdbcDeployer = new JdbcDeployer(jdbcResourceName);
+		jdbcDeployers.put(jdbcResourceName, jdbcDeployer);
+		deploy(jdbcDeployer).subscribe(id -> {
+			logger.info("Deployed JdbcDeployer with id: {}", id);
+		}, e -> {
+			logger.info("Deployed JdbcDeployer error", e);
 		});
 	}
 
@@ -78,7 +96,7 @@ public abstract class AbstractBootVerticle extends BaseVerticle {
 		});
 	}
 
-	protected Completable deploy(JsonObject conf) {
+	protected Completable configure(JsonObject conf) {
 		return Completable.complete();
 	}
 
@@ -93,19 +111,30 @@ public abstract class AbstractBootVerticle extends BaseVerticle {
 				cfgOld.encodePrettily());
 		if (!cfgNew.equals(cfgOld)) {
 			logger.debug("Configuration change detected, the new one is {}", cfgNew.encodePrettily());
-			deploy(cfgNew).subscribe(() -> logger.info("Apply new configuration to deploy succeeded"),
+			configure(cfgNew).subscribe(() -> logger.info("Apply new configuration to deploy succeeded"),
 					e -> logger.error("Apply new configuration to deploy failed", e));
 		}
 	}
 
+	@Deprecated
 	protected Completable redeploy(String verticleId, Verticle verticle, Consumer<? super String> doOnSuccess) {
 		return redeploy(verticleId, verticle, null, doOnSuccess);
 	}
 
+	protected Completable awareDeploy(String verticleId, Verticle verticle, Consumer<? super String> doOnSuccess) {
+		return awareDeploy(verticleId, verticle, null, doOnSuccess);
+	}
+
+	@Deprecated
 	protected Completable redeploy(String verticleId, String className, Consumer<? super String> doOnSuccess) {
 		return redeploy(verticleId, className, null, doOnSuccess);
 	}
 
+	protected Completable awareDeploy(String verticleId, String className, Consumer<? super String> doOnSuccess) {
+		return awareDeploy(verticleId, className, null, doOnSuccess);
+	}
+
+	@Deprecated
 	protected Completable redeploy(String verticleId, Verticle verticle, DeploymentOptions deploymentOptions,
 			Consumer<? super String> doOnSuccess) {
 		final Supplier<Single<String>> supplier = () -> {
@@ -114,6 +143,15 @@ public abstract class AbstractBootVerticle extends BaseVerticle {
 		return undeploy(verticleId).andThen(supplier.get()).doOnSuccess(doOnSuccess).ignoreElement();
 	}
 
+	protected Completable awareDeploy(String verticleId, Verticle verticle, DeploymentOptions deploymentOptions,
+			Consumer<? super String> doOnSuccess) {
+		final Supplier<Single<String>> supplier = () -> {
+			return deploymentOptions != null ? deploy(verticle, deploymentOptions) : deploy(verticle);
+		};
+		return undeploy(verticleId).andThen(supplier.get()).doOnSuccess(doOnSuccess).ignoreElement();
+	}
+
+	@Deprecated
 	protected Completable redeploy(String verticleId, String className, DeploymentOptions deploymentOptions,
 			Consumer<? super String> doOnSuccess) {
 		final Supplier<Single<String>> supplier = () -> {
@@ -122,6 +160,15 @@ public abstract class AbstractBootVerticle extends BaseVerticle {
 		return undeploy(verticleId).andThen(supplier.get()).doOnSuccess(doOnSuccess).ignoreElement();
 	}
 
+	protected Completable awareDeploy(String verticleId, String className, DeploymentOptions deploymentOptions,
+			Consumer<? super String> doOnSuccess) {
+		final Supplier<Single<String>> supplier = () -> {
+			return deploymentOptions != null ? deploy(className, deploymentOptions) : deploy(className);
+		};
+		return undeploy(verticleId).andThen(supplier.get()).doOnSuccess(doOnSuccess).ignoreElement();
+	}
+
+	@Deprecated
 	protected Completable redeploy(String className, DeploymentOptions deploymentOptions) {
 		List<Completable> list = new ArrayList<>();
 		deploymentIds.entrySet().stream().forEach(e -> {
@@ -132,6 +179,28 @@ public abstract class AbstractBootVerticle extends BaseVerticle {
 		return Completable.merge(list).andThen(deploy(className, deploymentOptions)).ignoreElement();
 	}
 
+	protected Completable awareDeploy(String className, DeploymentOptions deploymentOptions) {
+		List<Completable> list = new ArrayList<>();
+		deploymentIds.entrySet().stream().forEach(e -> {
+			if (className.equals(e.getValue())) {
+				list.add(undeploy(e.getKey()));
+			}
+		});
+		return Completable.merge(list).andThen(deploy(className, deploymentOptions)).ignoreElement();
+	}
+
+	protected Completable awareDeploy(Verticle verticle) {
+		List<Completable> list = new ArrayList<>();
+		String name = verticle.getClass().getName();
+		deploymentIds.entrySet().stream().forEach(e -> {
+			if (name.equals(e.getValue())) {
+				list.add(undeploy(e.getKey()));
+			}
+		});
+		return Completable.merge(list).andThen(deploy(verticle)).ignoreElement();
+	}
+
+	@Deprecated
 	protected Completable redeploy(Verticle verticle) {
 		List<Completable> list = new ArrayList<>();
 		String name = verticle.getClass().getName();
@@ -143,6 +212,24 @@ public abstract class AbstractBootVerticle extends BaseVerticle {
 		return Completable.merge(list).andThen(deploy(verticle)).ignoreElement();
 	}
 
+	protected Completable awareDeploy(Verticle... verticles) {
+		if (verticles == null || verticles.length == 0)
+			return Completable.complete();
+		List<Completable> list = new ArrayList<>();
+		String name = verticles[0].getClass().getName();
+		deploymentIds.entrySet().stream().forEach(e -> {
+			if (name.equals(e.getValue())) {
+				list.add(undeploy(e.getKey()));
+			}
+		});
+		return Completable.merge(list).andThen(Completable.defer(() -> {
+			List<Completable> dlist = Stream.of(verticles).map(v -> deploy(v).ignoreElement())
+					.collect(Collectors.toList());
+			return Completable.merge(dlist);
+		}));
+	}
+
+	@Deprecated
 	protected Completable redeploy(Verticle... verticles) {
 		if (verticles == null || verticles.length == 0)
 			return Completable.complete();

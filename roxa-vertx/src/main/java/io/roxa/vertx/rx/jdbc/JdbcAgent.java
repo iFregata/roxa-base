@@ -11,13 +11,14 @@
 package io.roxa.vertx.rx.jdbc;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Function;
 
 import javax.sql.DataSource;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.zaxxer.hikari.HikariDataSource;
 
 import io.reactivex.Completable;
 import io.reactivex.Flowable;
@@ -30,52 +31,45 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.sql.ResultSet;
 import io.vertx.ext.sql.SQLOptions;
 import io.vertx.ext.sql.UpdateResult;
-import io.vertx.reactivex.core.Vertx;
+import io.vertx.reactivex.core.AbstractVerticle;
 import io.vertx.reactivex.ext.jdbc.JDBCClient;
 import io.vertx.reactivex.ext.sql.SQLClientHelper;
 import io.vertx.reactivex.ext.sql.SQLConnection;
 
 /**
- * The Rxified JdbcExecutor
+ * The Rxified JdbcAgent
  * 
  * @author Steven Chen
  *
  */
-public class JdbcExecutor {
+public class JdbcAgent extends AbstractVerticle {
 
-	private static final Logger logger = LoggerFactory.getLogger(JdbcExecutor.class);
+	private static final Logger logger = LoggerFactory.getLogger(JdbcAgent.class);
 
 	private JDBCClient jdbcClient;
 
-	private DataSource dataSource;
+	private HikariDataSource hikariDataSource;
 
-	private JdbcExecutor() {
+	public JdbcAgent(HikariDataSource hikariDataSource) {
+		this.hikariDataSource = hikariDataSource;
 	}
 
-	/**
-	 * Create a instance of JdbcExecutor
-	 * 
-	 * @param vertx
-	 * @param dataSource
-	 * @return
-	 */
-	public static JdbcExecutor create(Vertx vertx, DataSource dataSource) {
-		Objects.requireNonNull(vertx);
-		Objects.requireNonNull(dataSource);
-		JdbcExecutor inst = new JdbcExecutor(io.vertx.ext.jdbc.JDBCClient.create(vertx.getDelegate(), dataSource));
-		inst.dataSource = dataSource;
-		return inst;
-	}
-
-	private JdbcExecutor(io.vertx.ext.jdbc.JDBCClient client) {
-		jdbcClient = new JDBCClient(client);
+	@Override
+	public void start() throws Exception {
+		jdbcClient = new JDBCClient(io.vertx.ext.jdbc.JDBCClient.create(vertx.getDelegate(), hikariDataSource));
 	}
 
 	/**
 	 * @return the dataSource
 	 */
 	public DataSource getDataSource() {
-		return this.dataSource;
+		return this.hikariDataSource;
+	}
+
+	@Override
+	public void stop() throws Exception {
+		if (hikariDataSource != null)
+			hikariDataSource.close();
 	}
 
 	/**

@@ -35,5 +35,6 @@
 		<module>roxa-depchain</module>
 		<module>roxa-util</module>
 		<module>roxa-vertx</module>
+		<module>roxa-vertx-cassandra</module>
 	</modules>
 </project>

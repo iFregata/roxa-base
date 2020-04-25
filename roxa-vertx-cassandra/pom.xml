@@ -1,0 +1,28 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>io.roxa</groupId>
+		<artifactId>roxa-base</artifactId>
+		<version>1.2.5-SNAPSHOT</version>
+	</parent>
+	<artifactId>roxa-vertx-cassandra</artifactId>
+
+	<dependencies>
+		<dependency>
+			<groupId>io.roxa</groupId>
+			<artifactId>roxa-util</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.roxa</groupId>
+			<artifactId>roxa-vertx</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.vertx</groupId>
+			<artifactId>vertx-cassandra-client</artifactId>
+		</dependency>
+	</dependencies>
+</project>

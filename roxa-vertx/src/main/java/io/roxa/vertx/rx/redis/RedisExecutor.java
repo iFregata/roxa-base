@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.reactivex.Single;
+import io.roxa.vertx.rx.JsonAsync;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.reactivex.core.Vertx;
@@ -39,8 +40,6 @@ public class RedisExecutor {
 
 	private static final Logger logger = LoggerFactory.getLogger(RedisExecutor.class);
 
-	private static final JsonObject EMPTY_JsonObject = new JsonObject();
-	private static final JsonArray EMPTY_JsonArray = new JsonArray();
 	private static final Response NIL_RESP = Response.newInstance(SimpleStringType.create("NIL"));
 	private static final Response ZERO_RESP = Response.newInstance(SimpleStringType.create("0"));
 
@@ -146,7 +145,7 @@ public class RedisExecutor {
 	public Single<JsonArray> hkeys(String key) {
 		return redisAPI.rxHkeys(key).map(resp -> {
 			if (resp.size() == 0) {
-				return EMPTY_JsonArray;
+				return JsonAsync.EMPTY_ARRAY;
 			}
 			JsonArray list = new JsonArray();
 			resp.forEach(e -> {
@@ -187,7 +186,7 @@ public class RedisExecutor {
 	public Single<JsonObject> hmget(String key) {
 		return redisAPI.rxHgetall(key).map(resp -> {
 			if (resp.size() == 0)
-				return EMPTY_JsonObject;
+				return JsonAsync.EMPTY_JSON;
 			JsonObject json = new JsonObject();
 			for (int i = 0; i < resp.size(); i += 2) {
 				json.put(resp.get(i).toString(), resp.get(i + 1).toString());

@@ -18,12 +18,17 @@ import com.fasterxml.jackson.databind.JavaType;
 import io.reactivex.Single;
 import io.roxa.GeneralFailureException;
 import io.roxa.util.Jsons;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 /**
  * @author steven
  *
  */
 public class JsonAsync extends Jsons {
+
+	public static final JsonObject EMPTY_JSON = new JsonObject();
+	public static final JsonArray EMPTY_ARRAY = new JsonArray();
 
 	public static Single<String> jsonAsyncOpt(Optional<?> opt) {
 		try {

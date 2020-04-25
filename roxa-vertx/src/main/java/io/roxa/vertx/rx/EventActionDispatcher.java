@@ -19,6 +19,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.reactivex.Single;
+import io.reactivex.disposables.Disposable;
+import io.roxa.vertx.rx.jdbc.JdbcAgent;
+import io.roxa.vertx.rx.jdbc.JdbcDeployer;
 import io.roxa.vertx.rx.jdbc.JdbcExecutor;
 import io.roxa.vertx.rx.jdbc.JdbcManager;
 import io.vertx.core.Promise;
@@ -52,12 +55,14 @@ public abstract class EventActionDispatcher extends AbstractVerticle {
 
 	protected String dataSourceName;
 
+	private Disposable jdbcAgentDisposable;
+
 	/**
 	 * 
 	 * @param eventBusURN
 	 */
 	public EventActionDispatcher(String eventBusURN) {
-		this(eventBusURN, null);
+		this(eventBusURN, (String) null);
 	}
 
 	/**
@@ -68,6 +73,14 @@ public abstract class EventActionDispatcher extends AbstractVerticle {
 	public EventActionDispatcher(String eventBusURN, String dataSourceName) {
 		this.eventBusURN = eventBusURN;
 		this.dataSourceName = dataSourceName;
+	}
+
+	public EventActionDispatcher(String eventBusURN, JdbcDeployer jdbcDeployer) {
+		this.eventBusURN = eventBusURN;
+		jdbcAgentDisposable = jdbcDeployer.subscribe(jdbcAgent -> {
+			logger.debug("Prepare to setup JdbcAgent[{}] on EventActionDispatcher[{}]", jdbcAgent, this);
+			setJdbcAgent(jdbcAgent);
+		});
 	}
 
 	@Override
@@ -82,6 +95,8 @@ public abstract class EventActionDispatcher extends AbstractVerticle {
 
 	@Override
 	public void stop(Promise<Void> stopPromise) throws Exception {
+		if (jdbcAgentDisposable != null)
+			jdbcAgentDisposable.dispose();
 		dispose();
 		super.stop(stopPromise);
 	}
@@ -103,6 +118,9 @@ public abstract class EventActionDispatcher extends AbstractVerticle {
 
 	protected void setJdbc(JdbcExecutor jdbc) {
 		this.jdbc = jdbc;
+	}
+
+	protected void setJdbcAgent(JdbcAgent jdbcAgent) {
 	}
 
 	protected void dispatch(Message<Object> msg) {
