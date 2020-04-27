@@ -39,23 +39,38 @@ public abstract class ResourceDeployer extends AbstractVerticle {
 
 	protected String deploymentId;
 
+	protected boolean awaredConfigStore;
+
 	public ResourceDeployer(String resourceCatalog, String resourceName) {
+		this(resourceCatalog, resourceName, true);
+	}
+
+	public ResourceDeployer(String resourceCatalog, String resourceName, boolean awaredConfigStore) {
 		this.resourceCatalog = resourceCatalog;
 		this.resourceName = resourceName;
+		this.awaredConfigStore = awaredConfigStore;
 	}
 
 	@Override
 	public void start(Promise<Void> startPromise) throws Exception {
-		ConfigStoreOptions fileStore = new ConfigStoreOptions().setType("file").setOptional(true).setConfig(
-				new JsonObject().put("path", String.format("conf/%s_%s.json", resourceCatalog, resourceName)));
-		ConfigRetrieverOptions options = new ConfigRetrieverOptions().addStore(fileStore);
-		ConfigRetriever cfgr = ConfigRetriever.create(vertx, options);
-		cfgr.listen(this::configurationChanged);
-		cfgr.rxGetConfig().flatMapCompletable(this::configure).subscribe(() -> {
-			startPromise.complete();
-		}, e -> {
-			startPromise.fail(e);
-		});
+		if (awaredConfigStore) {
+			ConfigStoreOptions fileStore = new ConfigStoreOptions().setType("file").setOptional(true).setConfig(
+					new JsonObject().put("path", String.format("conf/%s_%s.json", resourceCatalog, resourceName)));
+			ConfigRetrieverOptions options = new ConfigRetrieverOptions().addStore(fileStore);
+			ConfigRetriever cfgr = ConfigRetriever.create(vertx, options);
+			cfgr.listen(this::configurationChanged);
+			cfgr.rxGetConfig().flatMapCompletable(this::configure).subscribe(() -> {
+				startPromise.complete();
+			}, e -> {
+				startPromise.fail(e);
+			});
+		} else {
+			configure(JsonAsync.EMPTY_JSON).subscribe(() -> {
+				startPromise.complete();
+			}, e -> {
+				startPromise.fail(e);
+			});
+		}
 	}
 
 	abstract protected Single<Verticle> getResourceAgent(JsonObject cfg);

@@ -36,5 +36,6 @@
 		<module>roxa-util</module>
 		<module>roxa-vertx</module>
 		<module>roxa-vertx-cassandra</module>
+		<module>roxa-vertx-nitrite</module>
 	</modules>
 </project>

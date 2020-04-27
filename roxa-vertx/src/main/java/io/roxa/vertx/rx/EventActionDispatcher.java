@@ -49,11 +49,12 @@ public abstract class EventActionDispatcher extends AbstractVerticle {
 
 	protected Map<String, Consumer<Message<Object>>> handlers;
 
+	@Deprecated
 	protected JdbcExecutor jdbc;
 
 	protected String eventBusURN;
-
-	protected String dataSourceName;
+	@Deprecated
+	protected String jdbcSourceName;
 
 	private Disposable jdbcAgentDisposable;
 
@@ -66,13 +67,13 @@ public abstract class EventActionDispatcher extends AbstractVerticle {
 	}
 
 	/**
-	 * 
 	 * @param eventBusURN
-	 * @param dataSourceName
+	 * @param jdbcSourceName
 	 */
-	public EventActionDispatcher(String eventBusURN, String dataSourceName) {
+	@Deprecated
+	public EventActionDispatcher(String eventBusURN, String jdbcSourceName) {
 		this.eventBusURN = eventBusURN;
-		this.dataSourceName = dataSourceName;
+		this.jdbcSourceName = jdbcSourceName;
 	}
 
 	public EventActionDispatcher(String eventBusURN, JdbcDeployer jdbcDeployer) {
@@ -87,8 +88,8 @@ public abstract class EventActionDispatcher extends AbstractVerticle {
 	public void start(Promise<Void> startPromise) throws Exception {
 		if (eventBusURN != null)
 			vertx.eventBus().consumer(eventBusURN, this::dispatch);
-		if (dataSourceName != null)
-			JdbcManager.register(dataSourceName, this::setJdbc);
+		if (jdbcSourceName != null)
+			JdbcManager.register(jdbcSourceName, this::setJdbc);
 		didSetupDispatch();
 		super.start(startPromise);
 	}
@@ -116,6 +117,7 @@ public abstract class EventActionDispatcher extends AbstractVerticle {
 		handlers.put(action, handler);
 	}
 
+	@Deprecated
 	protected void setJdbc(JdbcExecutor jdbc) {
 		this.jdbc = jdbc;
 	}

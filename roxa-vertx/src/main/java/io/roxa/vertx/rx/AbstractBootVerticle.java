@@ -70,6 +70,7 @@ public abstract class AbstractBootVerticle extends BaseVerticle {
 		return jdbcDeployers.get(jdbcResourceName);
 	}
 
+	@Deprecated
 	protected void setupJdbcManager() {
 		deploy(JdbcManager.instance()).subscribe(id -> {
 			logger.info("Deployed JdbcManager with id: {}", id);

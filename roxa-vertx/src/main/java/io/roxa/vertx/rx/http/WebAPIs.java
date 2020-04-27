@@ -10,6 +10,8 @@
  */
 package io.roxa.vertx.rx.http;
 
+import java.util.Arrays;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,6 +22,7 @@ import io.roxa.util.Digests;
 import io.roxa.util.Moments;
 import io.roxa.util.Randoms;
 import io.roxa.util.Strings;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -35,6 +38,25 @@ public abstract class WebAPIs {
 
 	public static void main(String[] args) {
 		System.out.println(bearerAuthorization("abc", "abc", "GET"));
+	}
+
+	public static JsonObject generateClientRegister(String clientTitle) {
+		return generateClientRegister(clientTitle, "UNCATALOG", null);
+	}
+
+	public static JsonObject generateClientRegister(String clientTitle, String clientCatalog) {
+		return generateClientRegister(clientTitle, clientCatalog, null);
+	}
+
+	public static JsonObject generateClientRegister(String clientTitle, String clientCatalog, String[] roles) {
+		String clientId = Digests.digestMD5(String.format("%s::%s::roxa-vertx-webapi", clientTitle, clientCatalog));
+		String clientKey = Randoms.randomString(16);
+		JsonObject registerInfo = new JsonObject().put("client_id", clientId).put("client_key", clientKey)
+				.put("client_title", clientTitle).put("client_catalog", clientCatalog);
+		if (roles != null && roles.length > 0) {
+			registerInfo.put("roles", new JsonArray(Arrays.asList(roles)));
+		}
+		return registerInfo;
 	}
 
 	public static String bearerAuthorization(String clientId, String clientKey, String httpVerb) {
