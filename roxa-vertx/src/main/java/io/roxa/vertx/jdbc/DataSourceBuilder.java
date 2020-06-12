@@ -74,7 +74,7 @@ public abstract class DataSourceBuilder {
 	}
 
 	protected String getCharset() {
-		return config.getString("charset", "gb2312");
+		return config.getString("charset", null);
 	}
 
 	protected int getPoolSize() {

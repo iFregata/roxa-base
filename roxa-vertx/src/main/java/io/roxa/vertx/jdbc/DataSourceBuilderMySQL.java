@@ -50,6 +50,9 @@ public class DataSourceBuilderMySQL extends DataSourceBuilder {
 		cfg.addDataSourceProperty("maintainTimeStats", false);
 		cfg.addDataSourceProperty("verifyServerCertificate", false);
 		cfg.addDataSourceProperty("useSSL", false);
+		String charset = getCharset();
+		if (charset != null)
+			cfg.addDataSourceProperty("characterEncoding", charset);
 		setupLeakTraceInterval(cfg);
 		return new HikariDataSource(cfg);
 	}

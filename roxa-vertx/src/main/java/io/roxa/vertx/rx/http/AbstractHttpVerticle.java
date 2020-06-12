@@ -10,6 +10,8 @@
  */
 package io.roxa.vertx.rx.http;
 
+import java.io.File;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -54,6 +56,7 @@ import io.vertx.ext.healthchecks.Status;
 import io.vertx.reactivex.CompletableHelper;
 import io.vertx.reactivex.core.http.HttpServer;
 import io.vertx.reactivex.ext.healthchecks.HealthCheckHandler;
+import io.vertx.reactivex.ext.web.FileUpload;
 import io.vertx.reactivex.ext.web.Router;
 import io.vertx.reactivex.ext.web.RoutingContext;
 import io.vertx.reactivex.ext.web.handler.BodyHandler;
@@ -180,6 +183,42 @@ public abstract class AbstractHttpVerticle extends BaseVerticle {
 				.subscribe(CompletableHelper.toObserver(startPromise.future()));
 	}
 
+	protected Single<JsonObject> issueClientToken(RoutingContext rc, JsonObject tokenPolicy) {
+		String clientId = requestParam(rc, "client_id");
+		String clientKey = requestParam(rc, "client_key");
+		if (clientId == null || clientKey == null)
+			return Single.error(new BadRequestException("Missing parameters!"));
+		return getClientRegister(clientId).flatMap(clientInfo -> {
+			return WebAPIs.generateClientToken(clientInfo, clientId, clientKey, tokenPolicy);
+		});
+	}
+
+	protected Single<JsonObject> issueClientToken(String clientId, String clientKey, JsonObject tokenPolicy) {
+		if (clientId == null || clientKey == null)
+			return Single.error(new BadRequestException("Missing parameters!"));
+		return getClientRegister(clientId).flatMap(clientInfo -> {
+			return WebAPIs.generateClientToken(clientInfo, clientId, clientKey, tokenPolicy);
+		});
+	}
+
+	protected Single<JsonObject> verifyClientToken(RoutingContext rc) {
+		String authHeader = rc.request().getHeader("Authorization");
+		return WebAPIs.badClientToken(authHeader).flatMap(asJson -> {
+			JsonObject signContent = asJson.getJsonObject("content");
+			String signBase64 = asJson.getString("signature");
+			return getClientRegister(signContent.getString("client_id")).flatMap(clientRegister -> {
+				if (clientRegister == null || clientRegister.isEmpty())
+					return Single.error(new UnauthorizedException("JWT client illegal!"));
+				String clientKey = clientRegister.getString("client_key", null);
+				if (clientKey == null)
+					return Single.error(new UnauthorizedException("JWT client key illegal!"));
+				if (!Digests.digestVerifyBase64PlainKeyUrlSafe(signBase64, clientKey, signContent.encode()))
+					return Single.error(new UnauthorizedException("JWT signature illegal!"));
+				return Single.just(clientRegister);
+			});
+		});
+	}
+
 	protected Single<JsonObject> authorize(RoutingContext rc, JsonObject authPolicy) {
 		String method = rc.request().method().name();
 		String absoluteURI = rc.request().absoluteURI();
@@ -209,8 +248,8 @@ public abstract class AbstractHttpVerticle extends BaseVerticle {
 		logger.debug("Authorizing bearer: {}", authHeader);
 		if ("bearer".equals(mode))
 			return WebAPIs.badBearerAuthorization(authHeader, requestInfo).flatMap(asJson -> {
-				String clientId = asJson.getString("client_id");
 				JsonObject signContent = asJson.getJsonObject("content");
+				String clientId = signContent.getString("client_id");
 				String signBase64 = asJson.getString("signature");
 				return getClientRegister(clientId).flatMap(clientRegister -> {
 					if (clientRegister == null || clientRegister.isEmpty())
@@ -518,6 +557,44 @@ public abstract class AbstractHttpVerticle extends BaseVerticle {
 		else
 			logger.error("Unknown!!!");
 		staticServing(rc, htmlLocation);
+	}
+
+	protected static String guessContentTypeFromName(String filename) {
+		File file = new File(filename);
+		String mimeType = URLConnection.guessContentTypeFromName(file.getName());
+		if (mimeType == null)
+			mimeType = "application/octet-stream";
+		return mimeType;
+	}
+
+	protected static JsonObject resolveFileInfo(RoutingContext rc) {
+		FileUpload lastestOne = null;
+		for (FileUpload f : rc.fileUploads())
+			lastestOne = f;
+		if (lastestOne == null)
+			return null;
+		JsonObject uploadFileInfo = new JsonObject();
+		String value = lastestOne.fileName();
+		if (value != null)
+			uploadFileInfo.put("file_name", value);
+		value = lastestOne.name();
+		if (value != null)
+			uploadFileInfo.put("name", value);
+		value = lastestOne.contentType();
+		if (value != null)
+			uploadFileInfo.put("content_type", value);
+		value = lastestOne.uploadedFileName();
+		if (value != null)
+			uploadFileInfo.put("uploaded_file_name", value);
+		value = lastestOne.charSet();
+		if (value != null)
+			uploadFileInfo.put("charset", value);
+		value = lastestOne.contentTransferEncoding();
+		if (value != null)
+			uploadFileInfo.put("content_transfer_encoding", value);
+		long size = lastestOne.size();
+		uploadFileInfo.put("size", size);
+		return uploadFileInfo;
 	}
 
 	private Function<HttpStatusException, RoutingContext> logHttpStatusException(RoutingContext rc) {

@@ -12,11 +12,14 @@ package io.roxa.vertx.rx.http;
 
 import java.util.Arrays;
 
+import javax.naming.ServiceUnavailableException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.reactivex.Single;
 import io.roxa.http.BadRequestException;
+import io.roxa.http.UnauthorizedException;
 import io.roxa.util.Codecs;
 import io.roxa.util.Digests;
 import io.roxa.util.Moments;
@@ -35,6 +38,7 @@ public abstract class WebAPIs {
 
 	public static final String authHeaderBearer = "Bearer";
 	public static final long authTimeMillisOffset = 5 * 60 * 1000;
+	public static final long jwtTimeMillisOffset = 5 * 60;
 
 	public static void main(String[] args) {
 		System.out.println(bearerAuthorization("abc", "abc", "GET"));
@@ -46,6 +50,36 @@ public abstract class WebAPIs {
 
 	public static JsonObject generateClientRegister(String clientTitle, String clientCatalog) {
 		return generateClientRegister(clientTitle, clientCatalog, null);
+	}
+
+	public static Single<JsonObject> generateClientToken(JsonObject clientInfo, String clientId, String clientKey,
+			JsonObject tokenPolicy) {
+		try {
+			if (clientInfo == null || clientInfo.isEmpty())
+				return Single.error(new UnauthorizedException("Illegal client_id or client_key!"));
+			if (!clientKey.equals(clientInfo.getString("client_key")))
+				return Single.error(new UnauthorizedException("Illegal client_id or client_key!"));
+			Long issued = Moments.currentTimeSeconds();
+			Long ttlSeconds = null;
+			if (tokenPolicy == null || tokenPolicy.isEmpty())
+				ttlSeconds = 7200L;
+			else {
+				ttlSeconds = tokenPolicy.getLong("ttl_seconds", 7200L);
+			}
+			Long expired = issued + ttlSeconds;
+			JsonObject tokenJson = new JsonObject().put("client_id", clientId).put("issued", issued).put("expired",
+					expired);
+			String signContent = tokenJson.encode();
+			String signature = Digests.digestAsBase64PlainKeyUrlSafe(clientKey, signContent);
+			String base64Content = Codecs.asBase64URLSafeString(signContent);
+			String tokenStr = String.format("%s.%s", base64Content, signature);
+			logger.debug("Issue token for client: {}, token: {}, issued: {}, expired: {}", clientId, tokenStr,
+					Moments.strDateTimeSec(issued), Moments.strDateTimeSec(expired));
+			return Single.just(new JsonObject().put("token", tokenStr));
+		} catch (Throwable e) {
+			logger.error("Generate client token error", e);
+			return Single.error(new ServiceUnavailableException("Generate client token error"));
+		}
 	}
 
 	public static JsonObject generateClientRegister(String clientTitle, String clientCatalog, String[] roles) {
@@ -67,6 +101,45 @@ public abstract class WebAPIs {
 		String signature = Digests.digestAsBase64PlainKeyUrlSafe(clientKey, signContent);
 		String base64Content = Codecs.asBase64URLSafeString(signContent);
 		return String.format("Bearer %s.%s", base64Content, signature);
+	}
+
+	public static Single<JsonObject> badClientToken(String authorization) {
+		try {
+			String authHeader = Strings.emptyAsNull(authorization);
+			if (authHeader == null)
+				throw new BadRequestException("No authorization found");
+			if (!authHeader.startsWith(authHeaderBearer))
+				throw new BadRequestException("Illegal authorization");
+			final String _jwtContent = authHeader.substring(authHeaderBearer.length() + 1, authHeader.length());
+			final String jwtContent = Strings.emptyAsNull(_jwtContent);
+			if (jwtContent == null)
+				throw new BadRequestException("Illegal authorization jwt");
+			final String[] pair = jwtContent.split("\\.");
+			if (pair == null || pair.length < 2)
+				throw new BadRequestException("Illegal authorization jwt pair");
+			String signPart = Strings.emptyAsNull(pair[1]);
+			if (signPart == null)
+				throw new BadRequestException("Illegal authorization jwt part signature");
+			String jsonPart = Codecs.base64URLSafeAsString(pair[0]);
+			logger.debug("JWT json part: {},signature part: {} ", jsonPart, signPart);
+			JsonObject jsonContent = new JsonObject(jsonPart);
+			String clientId = Strings.emptyAsNull(jsonContent.getString("client_id", null));
+			Long issued = jsonContent.getLong("issued", null);
+			Long expired = jsonContent.getLong("expired", null);
+			if (clientId == null || issued == null || expired == null)
+				throw new BadRequestException("Illegal authorization jwt part missing field");
+			Long nowSecondsWithOffset = Moments.currentTimeSeconds() + jwtTimeMillisOffset;
+			if (nowSecondsWithOffset > expired) {
+				throw new BadRequestException("JWT is expired");
+			}
+			logger.debug("Verify token for client: {}, token: {}, issued: {}, expired: {}, now offset: {}", clientId,
+					jwtContent, Moments.strDateTimeSec(issued), Moments.strDateTimeSec(expired),
+					Moments.strDateTimeSec(nowSecondsWithOffset));
+			return Single.just(new JsonObject().put("content", jsonContent).put("signature", signPart));
+		} catch (Throwable e) {
+			logger.error("JWT verify failed", e);
+			return Single.error(e);
+		}
 	}
 
 	public static Single<JsonObject> badBearerAuthorization(String authorization, JsonObject requestInfo) {

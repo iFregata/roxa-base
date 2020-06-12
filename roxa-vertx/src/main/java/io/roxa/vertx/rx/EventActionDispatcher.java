@@ -147,13 +147,16 @@ public abstract class EventActionDispatcher extends AbstractVerticle {
 				Method m = clazz.getMethod(action);
 				if (m == null)
 					throw new IllegalStateException(String.format("%s not found", actionSignature));
+				// publishDispatchBefore(actionSignature, null);
 				Single<?> single = (Single<?>) m.invoke(this);
 				single.subscribe(result -> {
+					// publishDispatchAfter(actionSignature, null, result);
 					if (needsToReply)
 						msg.reply(result);
 				}, e -> {
 					String errorMsg = String.format("Invoke %s failed", actionSignature);
 					logger.error(errorMsg, e);
+					// publishDispatchException(actionSignature, errorMsg);
 					if (needsToReply)
 						msg.fail(500, errorMsg);
 				});
@@ -162,13 +165,16 @@ public abstract class EventActionDispatcher extends AbstractVerticle {
 				Method m = clazz.getMethod(action, JsonObject.class);
 				if (m == null)
 					throw new IllegalStateException(String.format("%s not found", actionSignature));
+				// publishDispatchBefore(actionSignature, msg.body());
 				Single<?> single = (Single<?>) m.invoke(this, msg.body());
 				single.subscribe(result -> {
+					// publishDispatchAfter(actionSignature, null, msg.body());
 					if (needsToReply)
 						msg.reply(result);
 				}, e -> {
 					String errorMsg = String.format("Invoke %s failed", actionSignature);
 					logger.error(errorMsg, e);
+					// publishDispatchException(actionSignature, errorMsg);
 					if (needsToReply)
 						msg.fail(500, errorMsg);
 				});
@@ -178,6 +184,7 @@ public abstract class EventActionDispatcher extends AbstractVerticle {
 		} catch (Throwable e) {
 			String errorMsg = String.format("Invoke Exception: %s, cause by: %s", actionSignature, e.getMessage());
 			logger.error(errorMsg, e);
+			// publishDispatchException(actionSignature, errorMsg);
 			if (needsToReply)
 				msg.fail(500, errorMsg);
 		}

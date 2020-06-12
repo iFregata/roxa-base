@@ -40,7 +40,8 @@ public class DataSourceBuilderSybase extends DataSourceBuilder {
 		cfg.addDataSourceProperty("portNumber", getPort());
 		cfg.addDataSourceProperty("databaseName", getDatabase());
 		cfg.addDataSourceProperty("serverType", 2);
-		cfg.addDataSourceProperty("charset", getCharset());
+		String charset = getCharset();
+		cfg.addDataSourceProperty("charset", charset == null ? "gb2312" : charset);
 		setupLeakTraceInterval(cfg);
 		return new HikariDataSource(cfg);
 	}
