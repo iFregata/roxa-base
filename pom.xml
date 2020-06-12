@@ -6,14 +6,14 @@
 	</parent>
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>roxa-base</artifactId>
-	<version>1.2.5-SNAPSHOT</version>
+	<version>1.2.5</version>
 	<packaging>pom</packaging>
 
 	<scm>
 		<connection>scm:git:https://git.shellpays.com/roxa/roxa-base.git</connection>
 		<developerConnection>scm:git:[fetch=]https://git.shellpays.com/roxa/roxa-base.git[push=]https://git.shellpays.com/roxa/roxa-base.git</developerConnection>
 		<url>https://git.shellpays.com/roxa/roxa-base.git</url>
-	  <tag>HEAD</tag>
+	  <tag>1.2.5</tag>
   </scm>
 
 	<properties>
