@@ -25,7 +25,7 @@
 		<commons-pool2.version>2.6.2</commons-pool2.version>
 		<poi.version>4.1.0</poi.version>
 		<jexcelapi.version>2.6.12</jexcelapi.version>
-		<bouncycastle.version>1.61</bouncycastle.version>
+		<bouncycastle.version>1.67</bouncycastle.version>
 		<okhttp.version>4.3.1</okhttp.version>
 		<rxjava2.version>2.2.12</rxjava2.version>
 		<fasterxml-uuid.version>3.2.0</fasterxml-uuid.version>
