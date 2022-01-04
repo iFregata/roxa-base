@@ -14,7 +14,7 @@
 		<!-- ========================================================= -->
 		<disruptor.version>3.4.2</disruptor.version>
 		<slf4j.version>1.7.30</slf4j.version>
-		<log4j.version>2.13.1</log4j.version>
+		<log4j.version>2.17.1</log4j.version>
 		<java.mail.version>1.6.2</java.mail.version>
 		<goole.zxing.version>3.4.0</goole.zxing.version>
 		<javax.json.version>1.1.4</javax.json.version>
