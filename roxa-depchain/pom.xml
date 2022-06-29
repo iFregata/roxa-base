@@ -23,7 +23,7 @@
 		<commons-codec.version>1.12</commons-codec.version>
 		<commons-net.version>3.6</commons-net.version>
 		<commons-pool2.version>2.6.2</commons-pool2.version>
-		<poi.version>4.1.0</poi.version>
+		<poi.version>4.1.1</poi.version>
 		<jexcelapi.version>2.6.12</jexcelapi.version>
 		<bouncycastle.version>1.61</bouncycastle.version>
 		<okhttp.version>4.3.1</okhttp.version>
