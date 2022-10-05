@@ -19,7 +19,7 @@
 		<goole.zxing.version>3.4.0</goole.zxing.version>
 		<javax.json.version>1.1.4</javax.json.version>
 		<jackson.version>2.10.2</jackson.version>
-		<jackson-databind.version>2.10.2</jackson-databind.version>
+		<jackson-databind.version>2.12.6.1</jackson-databind.version>
 		<commons-codec.version>1.12</commons-codec.version>
 		<commons-net.version>3.6</commons-net.version>
 		<commons-pool2.version>2.6.2</commons-pool2.version>
